@@ -1,0 +1,110 @@
+-- Insert placement test questions for JavaScript assessment
+INSERT INTO public.placement_questions (question, options, correct_answer, difficulty_level, points, explanation) VALUES
+
+-- Beginner Level Questions
+('¿Cuál es la forma correcta de declarar una variable en JavaScript?', 
+ '["var myVariable;", "variable myVariable;", "v myVariable;", "declare myVariable;"]', 
+ 'var myVariable;', 
+ 'beginner', 
+ 1, 
+ 'En JavaScript, las variables se declaran usando var, let o const.'),
+
+('¿Qué tipo de dato es "Hello World"?', 
+ '["number", "string", "boolean", "object"]', 
+ 'string', 
+ 'beginner', 
+ 1, 
+ 'Las cadenas de texto (strings) se escriben entre comillas.'),
+
+('¿Cuál es el resultado de 5 + 3 en JavaScript?', 
+ '["8", "53", "error", "undefined"]', 
+ '8', 
+ 'beginner', 
+ 1, 
+ 'JavaScript realiza la suma aritmética cuando ambos operandos son números.'),
+
+('¿Cómo se escribe un comentario de una línea en JavaScript?', 
+ '["/* comentario */", "// comentario", "<!-- comentario -->", "# comentario"]', 
+ '// comentario', 
+ 'beginner', 
+ 1, 
+ 'Los comentarios de una línea en JavaScript comienzan con //.'),
+
+('¿Cuál es la forma correcta de crear un array?', 
+ '["var arr = [];", "var arr = {};", "var arr = ();", "var arr = <>;"]', 
+ 'var arr = [];', 
+ 'beginner', 
+ 1, 
+ 'Los arrays se crean usando corchetes [].'),
+
+-- Intermediate Level Questions
+('¿Qué es el "hoisting" en JavaScript?', 
+ '["Un error de sintaxis", "El proceso de elevar declaraciones al inicio del scope", "Una función built-in", "Un tipo de loop"]', 
+ 'El proceso de elevar declaraciones al inicio del scope', 
+ 'intermediate', 
+ 2, 
+ 'Hoisting es el comportamiento de JavaScript de mover declaraciones al inicio de su scope.'),
+
+('¿Cuál es la diferencia entre == y === en JavaScript?', 
+ '["No hay diferencia", "== compara valor, === compara valor y tipo", "=== es más rápido", "== es para números, === para strings"]', 
+ '== compara valor, === compara valor y tipo', 
+ 'intermediate', 
+ 2, 
+ '== realiza coerción de tipos, mientras que === compara valor y tipo sin coerción.'),
+
+('¿Qué devuelve typeof null en JavaScript?', 
+ '["null", "undefined", "object", "error"]', 
+ 'object', 
+ 'intermediate', 
+ 2, 
+ 'Es un bug histórico de JavaScript que typeof null devuelve "object".'),
+
+('¿Cuál es el resultado de [1, 2, 3].map(x => x * 2)?', 
+ '["[1, 2, 3]", "[2, 4, 6]", "6", "error"]', 
+ '[2, 4, 6]', 
+ 'intermediate', 
+ 2, 
+ 'map() crea un nuevo array aplicando la función a cada elemento.'),
+
+('¿Qué es una closure en JavaScript?', 
+ '["Un tipo de loop", "Una función que tiene acceso a variables de su scope externo", "Un método de array", "Un operador"]', 
+ 'Una función que tiene acceso a variables de su scope externo', 
+ 'intermediate', 
+ 2, 
+ 'Una closure permite que una función acceda a variables de su scope léxico externo.'),
+
+-- Advanced Level Questions
+('¿Cuál es el resultado de 0.1 + 0.2 === 0.3 en JavaScript?', 
+ '["true", "false", "undefined", "error"]', 
+ 'false', 
+ 'advanced', 
+ 3, 
+ 'Debido a la precisión de punto flotante, 0.1 + 0.2 no es exactamente 0.3.'),
+
+('¿Qué hace el operador spread (...) con objetos?', 
+ '["Los elimina", "Crea una copia superficial", "Los convierte en array", "Causa un error"]', 
+ 'Crea una copia superficial', 
+ 'advanced', 
+ 3, 
+ 'El operador spread crea una copia superficial de las propiedades del objeto.'),
+
+('¿Cuál es la diferencia entre call() y apply()?', 
+ '["No hay diferencia", "call() acepta argumentos individuales, apply() acepta un array", "apply() es más rápido", "call() es para objetos, apply() para arrays"]', 
+ 'call() acepta argumentos individuales, apply() acepta un array', 
+ 'advanced', 
+ 3, 
+ 'call() pasa argumentos individualmente, apply() los pasa como array.'),
+
+('¿Qué es el Event Loop en JavaScript?', 
+ '["Un tipo de bucle", "El mecanismo que maneja la ejecución asíncrona", "Una función built-in", "Un método de debugging"]', 
+ 'El mecanismo que maneja la ejecución asíncrona', 
+ 'advanced', 
+ 3, 
+ 'El Event Loop gestiona la ejecución de código asíncrono en JavaScript.'),
+
+('¿Cuál es el resultado de Promise.all([Promise.resolve(1), Promise.reject(2)])?', 
+ '["[1, 2]", "1", "2", "Se rechaza con 2"]', 
+ 'Se rechaza con 2', 
+ 'advanced', 
+ 3, 
+ 'Promise.all se rechaza inmediatamente si cualquier promesa se rechaza.');
