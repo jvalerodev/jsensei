@@ -1,194 +1,209 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Label } from "@/components/ui/label"
-import { Brain, Clock, CheckCircle } from "lucide-react"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Brain, Clock, CheckCircle } from "lucide-react";
 
 interface Question {
-  id: string
-  question: string
-  options: string[]
-  correct_answer: string
-  difficulty_level: string
-  points: number
-  explanation: string
+  id: string;
+  question: string;
+  options: string[];
+  correct_answer: string;
+  difficulty_level: string;
+  points: number;
+  explanation: string;
 }
 
 interface TestResult {
-  totalScore: number
-  maxScore: number
-  skillLevel: "beginner" | "intermediate" | "advanced"
-  correctAnswers: number
-  totalQuestions: number
+  totalScore: number;
+  maxScore: number;
+  skillLevel: "beginner" | "intermediate" | "advanced";
+  correctAnswers: number;
+  totalQuestions: number;
 }
 
 export default function PlacementTestPage() {
-  const [questions, setQuestions] = useState<Question[]>([])
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
-  const [selectedAnswer, setSelectedAnswer] = useState("")
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [selectedAnswer, setSelectedAnswer] = useState("");
   const [userAnswers, setUserAnswers] = useState<
-    Array<{ questionId: string; answer: string; isCorrect: boolean; responseTime: number }>
-  >([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [testStartTime, setTestStartTime] = useState<number>(Date.now())
-  const [questionStartTime, setQuestionStartTime] = useState<number>(Date.now())
-  const [testCompleted, setTestCompleted] = useState(false)
-  const [testResult, setTestResult] = useState<TestResult | null>(null)
-  const [user, setUser] = useState<any>(null)
+    Array<{
+      questionId: string;
+      answer: string;
+      isCorrect: boolean;
+      responseTime: number;
+    }>
+  >([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [testStartTime, setTestStartTime] = useState<number>(Date.now());
+  const [questionStartTime, setQuestionStartTime] = useState<number>(
+    Date.now()
+  );
+  const [testCompleted, setTestCompleted] = useState(false);
+  const [testResult, setTestResult] = useState<TestResult | null>(null);
+  const [user, setUser] = useState<any>(null);
 
-  const router = useRouter()
-  const supabase = createClient()
+  const router = useRouter();
+  const supabase = createClient();
 
   useEffect(() => {
-    loadQuestionsAndUser()
-  }, [])
+    loadQuestionsAndUser();
+  }, []);
 
   const loadQuestionsAndUser = async () => {
     try {
       // Get current user
       const {
-        data: { user: currentUser },
-      } = await supabase.auth.getUser()
+        data: { user: currentUser }
+      } = await supabase.auth.getUser();
       if (!currentUser) {
-        router.push("/auth/login")
-        return
+        router.push("/auth/login");
+        return;
       }
-      setUser(currentUser)
+      setUser(currentUser);
 
       // Check if user already completed placement test
       const { data: profile } = await supabase
-        .from("profiles")
+        .from("users")
         .select("placement_test_completed")
         .eq("id", currentUser.id)
-        .single()
+        .single();
 
       if (profile?.placement_test_completed) {
-        router.push("/dashboard")
-        return
+        router.push("/dashboard");
+        return;
       }
 
       // Load questions (mix of all difficulty levels)
       const { data: questionsData, error } = await supabase
         .from("placement_questions")
         .select("*")
-        .order("difficulty_level", { ascending: true })
+        .order("difficulty_level", { ascending: true });
 
-      if (error) throw error
+      if (error) throw error;
 
       // Select a balanced mix of questions (5 beginner, 4 intermediate, 3 advanced)
-      const beginnerQuestions = questionsData.filter((q) => q.difficulty_level === "beginner").slice(0, 5)
-      const intermediateQuestions = questionsData.filter((q) => q.difficulty_level === "intermediate").slice(0, 4)
-      const advancedQuestions = questionsData.filter((q) => q.difficulty_level === "advanced").slice(0, 3)
+      const beginnerQuestions = questionsData
+        .filter((q) => q.difficulty_level === "beginner")
+        .slice(0, 5);
+      const intermediateQuestions = questionsData
+        .filter((q) => q.difficulty_level === "intermediate")
+        .slice(0, 4);
+      const advancedQuestions = questionsData
+        .filter((q) => q.difficulty_level === "advanced")
+        .slice(0, 3);
 
-      const selectedQuestions = [...beginnerQuestions, ...intermediateQuestions, ...advancedQuestions]
+      const selectedQuestions = [
+        ...beginnerQuestions,
+        ...intermediateQuestions,
+        ...advancedQuestions
+      ];
 
-      setQuestions(selectedQuestions)
-      setTestStartTime(Date.now())
-      setQuestionStartTime(Date.now())
+      setQuestions(selectedQuestions);
+      setTestStartTime(Date.now());
+      setQuestionStartTime(Date.now());
     } catch (error) {
-      console.error("Error loading questions:", error)
+      console.error("Error loading questions:", error);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleAnswerSelect = (answer: string) => {
-    setSelectedAnswer(answer)
-  }
+    setSelectedAnswer(answer);
+  };
 
   const handleNextQuestion = () => {
-    if (!selectedAnswer) return
+    if (!selectedAnswer) return;
 
-    const currentQuestion = questions[currentQuestionIndex]
-    const responseTime = Math.floor((Date.now() - questionStartTime) / 1000)
-    const isCorrect = selectedAnswer === currentQuestion.correct_answer
+    const currentQuestion = questions[currentQuestionIndex];
+    const responseTime = Math.floor((Date.now() - questionStartTime) / 1000);
+    const isCorrect = selectedAnswer === currentQuestion.correct_answer;
 
     const newAnswer = {
       questionId: currentQuestion.id,
       answer: selectedAnswer,
       isCorrect,
-      responseTime,
-    }
+      responseTime
+    };
 
-    const updatedAnswers = [...userAnswers, newAnswer]
-    setUserAnswers(updatedAnswers)
+    const updatedAnswers = [...userAnswers, newAnswer];
+    setUserAnswers(updatedAnswers);
 
     if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1)
-      setSelectedAnswer("")
-      setQuestionStartTime(Date.now())
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+      setSelectedAnswer("");
+      setQuestionStartTime(Date.now());
     } else {
       // Test completed
-      completeTest(updatedAnswers)
+      completeTest(updatedAnswers);
     }
-  }
+  };
 
   const completeTest = async (answers: typeof userAnswers) => {
-    setIsSubmitting(true)
+    setIsSubmitting(true);
 
     try {
-      // Calculate results
-      const correctAnswers = answers.filter((a) => a.isCorrect).length
-      const totalScore = answers.reduce((sum, answer, index) => {
-        return sum + (answer.isCorrect ? questions[index].points : 0)
-      }, 0)
-      const maxScore = questions.reduce((sum, q) => sum + q.points, 0)
-      const percentage = (totalScore / maxScore) * 100
-
-      // Determine skill level
-      let skillLevel: "beginner" | "intermediate" | "advanced" = "beginner"
-      if (percentage >= 70) skillLevel = "advanced"
-      else if (percentage >= 40) skillLevel = "intermediate"
-
-      const result: TestResult = {
-        totalScore,
-        maxScore,
-        skillLevel,
-        correctAnswers,
-        totalQuestions: questions.length,
-      }
-
-      // Save responses to database
+      // Save responses to database first
       for (let i = 0; i < answers.length; i++) {
-        const answer = answers[i]
+        const answer = answers[i];
         await supabase.from("placement_responses").insert({
           user_id: user.id,
           question_id: answer.questionId,
           selected_answer: answer.answer,
           is_correct: answer.isCorrect,
-          response_time: answer.responseTime,
-        })
+          response_time: answer.responseTime
+        });
       }
 
-      // Update user profile
-      await supabase
-        .from("profiles")
-        .update({
-          placement_test_completed: true,
-          placement_test_score: totalScore,
-          skill_level: skillLevel,
-        })
-        .eq("id", user.id)
+      // Use the placement service for evaluation and content generation
+      const { placementService } = await import("@/lib/ai/placement-service");
 
-      setTestResult(result)
-      setTestCompleted(true)
+      const placementResult = await placementService.evaluatePlacementTest(
+        user.id,
+        answers.map((answer) => ({
+          questionId: answer.questionId,
+          selectedAnswer: answer.answer,
+          responseTime: answer.responseTime
+        }))
+      );
+
+      // Complete user placement and generate learning path
+      const { success, learningPath } =
+        await placementService.completeUserPlacement(user.id, placementResult);
+
+      if (!success) {
+        throw new Error("Failed to complete placement test");
+      }
+
+      // Convert to UI format
+      const result: TestResult = {
+        totalScore: placementResult.totalScore,
+        maxScore: placementResult.maxScore,
+        skillLevel: placementResult.skillLevel,
+        correctAnswers: placementResult.correctAnswers,
+        totalQuestions: placementResult.totalQuestions
+      };
+
+      setTestResult(result);
+      setTestCompleted(true);
     } catch (error) {
-      console.error("Error completing test:", error)
+      console.error("Error completing test:", error);
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   const handleGoToDashboard = () => {
-    router.push("/dashboard")
-  }
+    router.push("/dashboard");
+  };
 
   if (isLoading) {
     return (
@@ -198,7 +213,7 @@ export default function PlacementTestPage() {
           <p className="text-lg text-gray-600">Cargando test de ubicación...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (testCompleted && testResult) {
@@ -220,23 +235,25 @@ export default function PlacementTestPage() {
             </div>
 
             <div className="bg-gray-50 rounded-lg p-6">
-              <h3 className="font-semibold text-lg mb-4">Tu Nivel Determinado:</h3>
+              <h3 className="font-semibold text-lg mb-4">
+                Tu Nivel Determinado:
+              </h3>
               <div className="flex items-center space-x-3">
                 <div
                   className={`w-4 h-4 rounded-full ${
                     testResult.skillLevel === "beginner"
                       ? "bg-green-500"
                       : testResult.skillLevel === "intermediate"
-                        ? "bg-yellow-500"
-                        : "bg-red-500"
+                      ? "bg-yellow-500"
+                      : "bg-red-500"
                   }`}
                 />
                 <span className="font-medium capitalize">
                   {testResult.skillLevel === "beginner"
                     ? "Principiante"
                     : testResult.skillLevel === "intermediate"
-                      ? "Intermedio"
-                      : "Avanzado"}
+                    ? "Intermedio"
+                    : "Avanzado"}
                 </span>
               </div>
               <p className="text-sm text-gray-600 mt-2">
@@ -246,29 +263,34 @@ export default function PlacementTestPage() {
 
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-blue-800 text-sm">
-                Basándose en tus resultados, hemos personalizado tu plan de aprendizaje. ¡Comienza tu viaje de
-                aprendizaje ahora!
+                Basándose en tus resultados, hemos personalizado tu plan de
+                aprendizaje. ¡Comienza tu viaje de aprendizaje ahora!
               </p>
             </div>
 
-            <Button onClick={handleGoToDashboard} className="w-full h-12 bg-blue-600 hover:bg-blue-700">
+            <Button
+              onClick={handleGoToDashboard}
+              className="w-full h-12 bg-blue-600 hover:bg-blue-700"
+            >
               Ir al Dashboard
             </Button>
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
-  const currentQuestion = questions[currentQuestionIndex]
-  const progress = ((currentQuestionIndex + 1) / questions.length) * 100
+  const currentQuestion = questions[currentQuestionIndex];
+  const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Test de Ubicación</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Test de Ubicación
+          </h1>
           <p className="text-gray-600">Evalúa tu nivel actual de JavaScript</p>
         </div>
 
@@ -296,26 +318,32 @@ export default function PlacementTestPage() {
                     currentQuestion?.difficulty_level === "beginner"
                       ? "bg-green-500"
                       : currentQuestion?.difficulty_level === "intermediate"
-                        ? "bg-yellow-500"
-                        : "bg-red-500"
+                      ? "bg-yellow-500"
+                      : "bg-red-500"
                   }`}
                 />
                 <span className="text-sm text-gray-500 capitalize">
                   {currentQuestion?.difficulty_level === "beginner"
                     ? "Principiante"
                     : currentQuestion?.difficulty_level === "intermediate"
-                      ? "Intermedio"
-                      : "Avanzado"}
+                    ? "Intermedio"
+                    : "Avanzado"}
                 </span>
               </div>
               <span className="text-sm text-gray-500">
-                {currentQuestion?.points} {currentQuestion?.points === 1 ? "punto" : "puntos"}
+                {currentQuestion?.points}{" "}
+                {currentQuestion?.points === 1 ? "punto" : "puntos"}
               </span>
             </div>
-            <CardTitle className="text-xl leading-relaxed">{currentQuestion?.question}</CardTitle>
+            <CardTitle className="text-xl leading-relaxed">
+              {currentQuestion?.question}
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <RadioGroup value={selectedAnswer} onValueChange={handleAnswerSelect}>
+            <RadioGroup
+              value={selectedAnswer}
+              onValueChange={handleAnswerSelect}
+            >
               <div className="space-y-3">
                 {currentQuestion?.options.map((option, index) => (
                   <div
@@ -323,7 +351,10 @@ export default function PlacementTestPage() {
                     className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
                   >
                     <RadioGroupItem value={option} id={`option-${index}`} />
-                    <Label htmlFor={`option-${index}`} className="flex-1 cursor-pointer text-base">
+                    <Label
+                      htmlFor={`option-${index}`}
+                      className="flex-1 cursor-pointer text-base"
+                    >
                       {option}
                     </Label>
                   </div>
@@ -338,7 +369,9 @@ export default function PlacementTestPage() {
           <div className="text-sm text-gray-500">
             {userAnswers.length > 0 && (
               <span>
-                Correctas hasta ahora: {userAnswers.filter((a) => a.isCorrect).length}/{userAnswers.length}
+                Correctas hasta ahora:{" "}
+                {userAnswers.filter((a) => a.isCorrect).length}/
+                {userAnswers.length}
               </span>
             )}
           </div>
@@ -350,11 +383,11 @@ export default function PlacementTestPage() {
             {isSubmitting
               ? "Procesando..."
               : currentQuestionIndex === questions.length - 1
-                ? "Finalizar Test"
-                : "Siguiente"}
+              ? "Finalizar Test"
+              : "Siguiente"}
           </Button>
         </div>
       </div>
     </div>
-  )
+  );
 }

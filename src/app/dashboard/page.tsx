@@ -26,10 +26,15 @@ export default async function DashboardPage() {
 
   // Get user profile and progress
   const { data: profile } = await supabase
-    .from("user_profiles")
+    .from("users")
     .select("*")
-    .eq("user_id", user.id)
+    .eq("id", user.id)
     .single();
+
+  // Check if user needs to take placement test
+  if (!profile?.placement_test_completed) {
+    redirect("/placement-test");
+  }
 
   // Get user progress
   const { data: progress } = await supabase
@@ -37,10 +42,17 @@ export default async function DashboardPage() {
     .select("*")
     .eq("user_id", user.id);
 
-  // Get recent activity
+  // Get lessons for the user's level
+  const { data: lessons } = await supabase
+    .from("lessons")
+    .select("*")
+    .eq("difficulty_level", profile.skill_level)
+    .order("order_index");
+
+  // Get recent placement responses for activity
   const { data: recentActivity } = await supabase
-    .from("user_responses")
-    .select("*, exercises(topic)")
+    .from("placement_responses")
+    .select("*, placement_questions(question)")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(5);
@@ -60,11 +72,19 @@ export default async function DashboardPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900 mb-2">
-            ¡Bienvenido de vuelta, {profile?.full_name || user.email}!
+            ¡Bienvenido de vuelta, {profile?.display_name || user.email}!
           </h1>
           <p className="text-slate-600">
-            Continúa tu viaje de aprendizaje en JavaScript
+            Continúa tu viaje de aprendizaje en JavaScript - Nivel:{" "}
+            {getLevelName(profile?.skill_level)}
           </p>
+          {profile?.placement_test_score && (
+            <div className="mt-2">
+              <Badge variant="outline">
+                Test de nivelación: {profile.placement_test_score} puntos
+              </Badge>
+            </div>
+          )}
         </div>
 
         {/* Stats Overview */}
@@ -136,7 +156,8 @@ export default async function DashboardPage() {
                   Tu Ruta de Aprendizaje
                 </CardTitle>
                 <CardDescription>
-                  Basada en tu nivel: {profile?.skill_level || "principiante"}
+                  Basada en tu nivel:{" "}
+                  {getLevelName(profile?.skill_level) || "Principiante"}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -295,11 +316,17 @@ export default async function DashboardPage() {
               <CardContent>
                 <div className="text-center">
                   <Badge variant="secondary" className="text-lg px-4 py-2 mb-2">
-                    {profile?.skill_level?.toUpperCase() || "PRINCIPIANTE"}
+                    {getLevelName(profile?.skill_level)?.toUpperCase() ||
+                      "PRINCIPIANTE"}
                   </Badge>
                   <p className="text-sm text-slate-600">
                     Continúa aprendiendo para subir de nivel
                   </p>
+                  {profile?.placement_test_score && (
+                    <div className="mt-2 text-xs text-slate-500">
+                      Puntuación del test: {profile.placement_test_score}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -310,9 +337,17 @@ export default async function DashboardPage() {
   );
 }
 
+function getLevelName(level: string): string {
+  const levelNames = {
+    beginner: "Principiante",
+    intermediate: "Intermedio"
+  };
+  return levelNames[level as keyof typeof levelNames] || "Principiante";
+}
+
 function getLearningPath(skillLevel: string) {
   const paths = {
-    principiante: [
+    beginner: [
       {
         id: "variables",
         title: "Variables y Tipos de Datos",
@@ -374,13 +409,39 @@ function getLearningPath(skillLevel: string) {
         description: "Import/export y organización de código"
       }
     ],
-    intermedio: [
-      // Similar structure for intermediate level
-    ],
-    avanzado: [
-      // Similar structure for advanced level
+    intermediate: [
+      {
+        id: "async-await",
+        title: "Async/Await",
+        description: "Maneja código asíncrono de forma elegante"
+      },
+      {
+        id: "promises-advanced",
+        title: "Promesas Avanzadas",
+        description: "Promise.all, Promise.race y manejo de errores"
+      },
+      {
+        id: "array-methods",
+        title: "Métodos de Array Modernos",
+        description: "map, filter, reduce y más"
+      },
+      {
+        id: "destructuring-advanced",
+        title: "Destructuring Avanzado",
+        description: "Patrones complejos y casos de uso"
+      },
+      {
+        id: "modules",
+        title: "Módulos ES6",
+        description: "Import/export y organización de código"
+      },
+      {
+        id: "classes",
+        title: "Clases y OOP",
+        description: "Programación orientada a objetos en JS"
+      }
     ]
   };
 
-  return paths[skillLevel] || paths.principiante;
+  return paths[skillLevel as keyof typeof paths] || paths.beginner;
 }

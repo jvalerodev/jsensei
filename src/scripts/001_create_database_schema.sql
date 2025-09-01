@@ -1,9 +1,9 @@
--- Create users profile table
-CREATE TABLE IF NOT EXISTS public.profiles (
+-- Create users table
+CREATE TABLE IF NOT EXISTS public.users (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   display_name TEXT NOT NULL,
   email TEXT NOT NULL,
-  skill_level TEXT CHECK (skill_level IN ('beginner', 'intermediate', 'advanced')) DEFAULT 'beginner',
+  skill_level TEXT CHECK (skill_level IN ('beginner', 'intermediate')) DEFAULT 'beginner',
   placement_test_completed BOOLEAN DEFAULT FALSE,
   placement_test_score INTEGER DEFAULT 0,
   current_lesson_id UUID,
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS public.lessons (
 -- Create user progress table
 CREATE TABLE IF NOT EXISTS public.user_progress (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   lesson_id UUID NOT NULL REFERENCES public.lessons(id) ON DELETE CASCADE,
   status TEXT CHECK (status IN ('not_started', 'in_progress', 'completed')) DEFAULT 'not_started',
   score INTEGER DEFAULT 0,
@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS public.placement_questions (
 -- Create user placement test responses table
 CREATE TABLE IF NOT EXISTS public.placement_responses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   question_id UUID NOT NULL REFERENCES public.placement_questions(id) ON DELETE CASCADE,
   selected_answer TEXT NOT NULL,
   is_correct BOOLEAN NOT NULL,
@@ -67,20 +67,20 @@ CREATE TABLE IF NOT EXISTS public.placement_responses (
 );
 
 -- Enable Row Level Security
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.lessons ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_progress ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.placement_questions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.placement_responses ENABLE ROW LEVEL SECURITY;
 
--- RLS Policies for profiles
-CREATE POLICY "Users can view their own profile" ON public.profiles
+-- RLS Policies for users
+CREATE POLICY "Users can view their own profile" ON public.users
   FOR SELECT USING (auth.uid() = id);
 
-CREATE POLICY "Users can update their own profile" ON public.profiles
+CREATE POLICY "Users can update their own profile" ON public.users
   FOR UPDATE USING (auth.uid() = id);
 
-CREATE POLICY "Users can insert their own profile" ON public.profiles
+CREATE POLICY "Users can insert their own profile" ON public.users
   FOR INSERT WITH CHECK (auth.uid() = id);
 
 -- RLS Policies for lessons (public read access)
@@ -116,7 +116,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  INSERT INTO public.profiles (id, display_name, email)
+  INSERT INTO public.users (id, display_name, email)
   VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data ->> 'display_name', 'Usuario'),

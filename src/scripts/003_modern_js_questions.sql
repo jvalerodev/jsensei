@@ -1,13 +1,13 @@
 -- Modern JavaScript Placement Test Questions
--- Comprehensive test covering ES6+, modern patterns, and best practices
+-- This file contains updated questions covering modern JS features and best practices
 
--- Clear existing questions first (if any)
+-- Clear existing questions first
 DELETE FROM public.placement_questions;
 
--- Insert modern JavaScript questions
+-- Insert comprehensive modern JavaScript questions
 INSERT INTO public.placement_questions (question, options, correct_answer, difficulty_level, points, explanation) VALUES
 
--- BEGINNER LEVEL (Modern JS Fundamentals)
+-- BEGINNER LEVEL (ES6+ Basics)
 ('¿Cuál es la diferencia principal entre let y var?', 
  '["let tiene scope de función, var tiene scope de bloque", "let tiene scope de bloque, var tiene scope de función", "No hay diferencia", "let es más lento que var"]', 
  'let tiene scope de bloque, var tiene scope de función', 
@@ -50,42 +50,7 @@ INSERT INTO public.placement_questions (question, options, correct_answer, diffi
  1, 
  'Las exportaciones por defecto se importan sin llaves: import nombre from "ruta".'),
 
-('¿Cuál es la forma moderna de crear un string multilínea?', 
- '["\"línea1\" + \"\\n\" + \"línea2\"", "`línea1\nlínea2`", "\"línea1\\nlínea2\"", "String.multiline(\"línea1\", \"línea2\")"]', 
- '`línea1\nlínea2`', 
- 'beginner', 
- 1, 
- 'Template literals permiten strings multilínea de forma natural sin concatenación.'),
-
-('¿Cuál es la diferencia entre == y === en JavaScript?', 
- '["No hay diferencia", "== compara valor, === compara valor y tipo", "=== es más rápido", "== es para números, === para strings"]', 
- '== compara valor, === compara valor y tipo', 
- 'beginner', 
- 1, 
- '== realiza coerción de tipos, mientras que === compara valor y tipo sin coerción.'),
-
-('¿Qué devuelve typeof null en JavaScript?', 
- '["null", "undefined", "object", "error"]', 
- 'object', 
- 'beginner', 
- 1, 
- 'Es un bug histórico de JavaScript que typeof null devuelve "object".'),
-
-('¿Cuál es el resultado de [1, 2, 3].map(x => x * 2)?', 
- '["[1, 2, 3]", "[2, 4, 6]", "6", "error"]', 
- '[2, 4, 6]', 
- 'beginner', 
- 1, 
- 'map() crea un nuevo array aplicando la función a cada elemento.'),
-
-('¿Qué es el "hoisting" en JavaScript?', 
- '["Un error de sintaxis", "El proceso de elevar declaraciones al inicio del scope", "Una función built-in", "Un tipo de loop"]', 
- 'El proceso de elevar declaraciones al inicio del scope', 
- 'beginner', 
- 1, 
- 'Hoisting es el comportamiento de JavaScript de mover declaraciones al inicio de su scope.'),
-
--- INTERMEDIATE LEVEL (Advanced ES6+, Async, Modern Patterns)
+-- INTERMEDIATE LEVEL (Advanced ES6+, Async, etc.)
 ('¿Qué devuelve una función async que no tiene return explícito?', 
  '["undefined", "null", "Promise<undefined>", "Error"]', 
  'Promise<undefined>', 
@@ -135,60 +100,103 @@ INSERT INTO public.placement_questions (question, options, correct_answer, diffi
  2, 
  'Object.freeze() previene modificaciones a las propiedades del primer nivel del objeto.'),
 
+-- ADVANCED LEVEL (Modern patterns, performance, advanced concepts)
+('¿Cuál es la diferencia entre microtasks y macrotasks en el Event Loop?', 
+ '["No hay diferencia", "Microtasks tienen mayor prioridad que macrotasks", "Macrotasks son más rápidas", "Solo existe un tipo de task"]', 
+ 'Microtasks tienen mayor prioridad que macrotasks', 
+ 'advanced', 
+ 3, 
+ 'Microtasks (Promises) se ejecutan antes que macrotasks (setTimeout) en cada ciclo del Event Loop.'),
+
+('¿Qué hace el método Array.from() con un segundo parámetro?', 
+ '["Filtra elementos", "Aplica una función de mapeo a cada elemento", "Ordena el array", "Elimina duplicados"]', 
+ 'Aplica una función de mapeo a cada elemento', 
+ 'advanced', 
+ 3, 
+ 'Array.from(iterable, mapFn) combina conversión y mapeo en una sola operación.'),
+
+('¿Cuál es el resultado de typeof (() => {}) en JavaScript?', 
+ '["arrow", "function", "object", "undefined"]', 
+ 'function', 
+ 'advanced', 
+ 3, 
+ 'Las arrow functions son un tipo de función, por lo que typeof devuelve "function".'),
+
+('¿Qué es un WeakMap y cuándo usarlo?', 
+ '["Un Map más rápido", "Un Map con claves débilmente referenciadas", "Un Map inmutable", "No existe WeakMap"]', 
+ 'Un Map con claves débilmente referenciadas', 
+ 'advanced', 
+ 3, 
+ 'WeakMap permite que sus claves sean recolectadas por el garbage collector, útil para metadatos.'),
+
 ('¿Cuál es la diferencia entre for...in y for...of?', 
  '["No hay diferencia", "for...in itera índices/claves, for...of itera valores", "for...of es más lento", "for...in es para objetos, for...of para arrays"]', 
  'for...in itera índices/claves, for...of itera valores', 
- 'intermediate', 
- 2, 
+ 'advanced', 
+ 3, 
  'for...in itera propiedades enumerables, for...of itera valores de iterables.'),
 
--- INTERMEDIATE LEVEL (Additional concepts for intermediate users)
+('¿Qué hace Proxy en JavaScript?', 
+ '["Crea una copia de objeto", "Intercepta y personaliza operaciones en objetos", "Es un patrón de diseño", "Conecta a internet"]', 
+ 'Intercepta y personaliza operaciones en objetos', 
+ 'advanced', 
+ 3, 
+ 'Proxy permite interceptar y redefinir operaciones como get, set, delete en objetos.'),
 
-('¿Cuál es el resultado de [1, 2, 3].filter(x => x > 1)?', 
- '["[1, 2, 3]", "[2, 3]", "[1]", "error"]', 
- '[2, 3]', 
- 'intermediate', 
- 2, 
- 'filter() crea un nuevo array con elementos que pasan la condición.'),
+('¿Cuál es el propósito de Symbol en JavaScript?', 
+ '["Crear números", "Crear identificadores únicos", "Crear strings", "Crear objetos"]', 
+ 'Crear identificadores únicos', 
+ 'advanced', 
+ 3, 
+ 'Symbol crea identificadores únicos, útiles para propiedades privadas y evitar colisiones.'),
 
-('¿Cuál es la diferencia entre call() y apply()?', 
- '["No hay diferencia", "call() acepta argumentos individuales, apply() acepta un array", "apply() es más rápido", "call() es para objetos, apply() para arrays"]', 
- 'call() acepta argumentos individuales, apply() acepta un array', 
- 'intermediate', 
- 2, 
- 'call() pasa argumentos individualmente, apply() los pasa como array.'),
+('¿Qué es el patrón Module en JavaScript moderno?', 
+ '["Una función", "Un sistema para encapsular y exportar código", "Un tipo de variable", "Un operador"]', 
+ 'Un sistema para encapsular y exportar código', 
+ 'advanced', 
+ 3, 
+ 'Los módulos ES6 proporcionan un sistema nativo para organizar y reutilizar código.'),
 
-('¿Qué es una closure en JavaScript?', 
- '["Un tipo de loop", "Una función que tiene acceso a variables de su scope externo", "Un método de array", "Un operador"]', 
- 'Una función que tiene acceso a variables de su scope externo', 
- 'intermediate', 
- 2, 
- 'Una closure permite que una función acceda a variables de su scope léxico externo.'),
+-- EXPERT LEVEL (Performance, advanced patterns, cutting-edge features)
+('¿Cuál es la diferencia entre JSON.parse() y eval() para parsear JSON?', 
+ '["No hay diferencia", "JSON.parse() es más seguro y rápido", "eval() es más seguro", "eval() solo funciona con arrays"]', 
+ 'JSON.parse() es más seguro y rápido', 
+ 'advanced', 
+ 3, 
+ 'JSON.parse() es específico para JSON, más seguro (no ejecuta código) y optimizado.'),
 
-('¿Cuál es el resultado de 0.1 + 0.2 === 0.3 en JavaScript?', 
- '["true", "false", "undefined", "error"]', 
- 'false', 
- 'intermediate', 
- 2, 
- 'Debido a la precisión de punto flotante, 0.1 + 0.2 no es exactamente 0.3.'),
+('¿Qué hace el operador instanceof con clases ES6?', 
+ '["Crea instancias", "Verifica si un objeto es instancia de una clase", "Elimina instancias", "Copia instancias"]', 
+ 'Verifica si un objeto es instancia de una clase', 
+ 'advanced', 
+ 3, 
+ 'instanceof verifica la cadena de prototipos para determinar si un objeto es instancia de una clase.'),
 
-('¿Qué hace el operador spread (...) con objetos?', 
- '["Los elimina", "Crea una copia superficial", "Los convierte en array", "Causa un error"]', 
- 'Crea una copia superficial', 
- 'intermediate', 
- 2, 
- 'El operador spread crea una copia superficial de las propiedades del objeto.'),
+('¿Cuál es el resultado de Promise.race([promise1, promise2])?', 
+ '["El resultado de ambas promesas", "El resultado de la primera promesa que se resuelve", "Siempre un error", "Un array de resultados"]', 
+ 'El resultado de la primera promesa que se resuelve', 
+ 'advanced', 
+ 3, 
+ 'Promise.race devuelve el resultado de la primera promesa que se resuelve o rechaza.'),
 
-('¿Cuál es la diferencia entre JSON.stringify() y JSON.parse()?', 
- '["No hay diferencia", "stringify convierte a string, parse convierte de string", "parse es más rápido", "stringify es para objetos, parse para arrays"]', 
- 'stringify convierte a string, parse convierte de string', 
- 'intermediate', 
- 2, 
- 'JSON.stringify() serializa objetos a JSON string, JSON.parse() deserializa JSON string a objetos.'),
+('¿Qué son los Web Workers en JavaScript?', 
+ '["Una librería", "Scripts que se ejecutan en background threads", "Un tipo de función", "Un patrón de diseño"]', 
+ 'Scripts que se ejecutan en background threads', 
+ 'advanced', 
+ 3, 
+ 'Web Workers permiten ejecutar JavaScript en threads separados sin bloquear el hilo principal.'),
 
-('¿Qué hace el método Array.reduce()?', 
- '["Reduce el tamaño del array", "Combina todos los elementos en un solo valor", "Elimina elementos", "Ordena el array"]', 
- 'Combina todos los elementos en un solo valor', 
- 'intermediate', 
- 2, 
- 'reduce() ejecuta una función reductora en cada elemento del array, resultando en un solo valor.');
+('¿Cuál es la diferencia entre shallow copy y deep copy?', 
+ '["No hay diferencia", "Shallow copia referencias, deep copia valores", "Deep es más rápido", "Shallow es para arrays, deep para objetos"]', 
+ 'Shallow copia referencias, deep copia valores', 
+ 'advanced', 
+ 3, 
+ 'Shallow copy copia solo el primer nivel, deep copy crea copias independientes de todos los niveles.'),
+
+('¿Qué hace Object.defineProperty()?', 
+ '["Elimina propiedades", "Define propiedades con descriptores específicos", "Copia propiedades", "Lista propiedades"]', 
+ 'Define propiedades con descriptores específicos', 
+ 'advanced', 
+ 3, 
+ 'Object.defineProperty() permite definir propiedades con control fino sobre configurabilidad, enumerabilidad, etc.');
+
