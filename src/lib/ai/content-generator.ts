@@ -1,43 +1,53 @@
 // AI Content Generation utilities for JSensei
 export interface ContentRequest {
-  topic: string
-  level: "principiante" | "intermedio" | "avanzado"
-  type: "explanation" | "exercise" | "example"
-  userId: string
+  topic: string;
+  level: "principiante" | "intermedio" | "avanzado";
+  type: "explanation" | "exercise" | "example";
+  userId: string;
 }
 
 export interface GeneratedContent {
-  title: string
-  content: string
-  exercises?: Exercise[]
-  examples?: CodeExample[]
+  title: string;
+  content: string;
+  exercises?: Exercise[];
+  examples?: CodeExample[];
 }
 
 export interface Exercise {
-  id: string
-  question: string
-  type: "multiple-choice" | "code-completion" | "debugging"
-  options?: string[]
-  correctAnswer: string
-  explanation: string
+  id: string;
+  question: string;
+  type: "multiple-choice" | "code-completion" | "debugging";
+  options?: string[];
+  correctAnswer: string;
+  explanation: string;
 }
 
 export interface CodeExample {
-  title: string
-  code: string
-  explanation: string
+  title: string;
+  code: string;
+  explanation: string;
 }
 
 // Mock AI content generation - can be replaced with actual AI service
-export async function generateContent(request: ContentRequest): Promise<GeneratedContent> {
+export async function generateContent(
+  request: ContentRequest
+): Promise<GeneratedContent> {
   // Simulate AI processing delay
-  await new Promise((resolve) => setTimeout(resolve, 1000))
+  await new Promise((resolve) => setTimeout(resolve, 1000));
 
-  const mockContent = getMockContent(request.topic, request.level, request.type)
-  return mockContent
+  const mockContent = getMockContent(
+    request.topic,
+    request.level,
+    request.type
+  );
+  return mockContent;
 }
 
-function getMockContent(topic: string, level: string, type: string): GeneratedContent {
+function getMockContent(
+  topic: string,
+  level: string,
+  type: string
+): GeneratedContent {
   const contentMap = {
     variables: {
       principiante: {
@@ -58,40 +68,46 @@ const edad = 25;
             {
               title: "Declaración de variables",
               code: 'let mensaje = "Hola mundo";\nconst PI = 3.14159;\nlet contador = 0;',
-              explanation: "Aquí declaramos diferentes tipos de variables con valores iniciales.",
-            },
-          ],
-        },
-      },
-    },
-  }
+              explanation:
+                "Aquí declaramos diferentes tipos de variables con valores iniciales."
+            }
+          ]
+        }
+      }
+    }
+  };
+
+  const topicData = contentMap[topic as keyof typeof contentMap];
+  const levelData = topicData?.[level as keyof typeof topicData];
+  const typeData = levelData?.[type as keyof typeof levelData];
 
   return (
-    contentMap[topic]?.[level]?.[type] || {
+    typeData || {
       title: `${topic} - ${level}`,
       content: `Contenido generado para ${topic} en nivel ${level}. Este es contenido de ejemplo que será reemplazado por IA real.`,
       examples: [
         {
           title: "Ejemplo básico",
           code: '// Código de ejemplo\nconsole.log("Hola mundo");',
-          explanation: "Este es un ejemplo básico del concepto.",
-        },
-      ],
+          explanation: "Este es un ejemplo básico del concepto."
+        }
+      ]
     }
-  )
+  );
 }
 
 export async function evaluateExercise(
   exerciseId: string,
   userAnswer: string,
-  correctAnswer: string,
+  correctAnswer: string
 ): Promise<{
-  isCorrect: boolean
-  feedback: string
-  suggestions: string[]
+  isCorrect: boolean;
+  feedback: string;
+  suggestions: string[];
 }> {
   // Mock evaluation - can be replaced with actual AI evaluation
-  const isCorrect = userAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase()
+  const isCorrect =
+    userAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
 
   return {
     isCorrect,
@@ -100,6 +116,6 @@ export async function evaluateExercise(
       : "No es correcto. Revisa el concepto y vuelve a intentarlo.",
     suggestions: isCorrect
       ? ["Continúa con el siguiente ejercicio"]
-      : ["Revisa la explicación del tema", "Practica con ejemplos similares"],
-  }
+      : ["Revisa la explicación del tema", "Practica con ejemplos similares"]
+  };
 }

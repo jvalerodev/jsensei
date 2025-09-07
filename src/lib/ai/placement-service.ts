@@ -1,5 +1,7 @@
 // Placement Test Service - Handles test evaluation and personalized content generation
 import { createClient } from "@/lib/supabase/client";
+import { ContentGeneratorService } from "./content-generator-service";
+import { type PlacementTestData } from "./schemas";
 
 export interface PlacementResult {
   skillLevel: "beginner" | "intermediate";
@@ -429,12 +431,17 @@ usuario.edad = 26; // ✅ Permitido (modifica contenido)
   }
 
   /**
-   * Save placement test results and generate initial content
+   * Save placement test results and generate initial content with AI
    */
   async completeUserPlacement(
     userId: string,
-    result: PlacementResult
-  ): Promise<{ success: boolean; learningPath?: LearningPath }> {
+    result: PlacementResult,
+    placementData?: PlacementTestData
+  ): Promise<{
+    success: boolean;
+    learningPath?: LearningPath;
+    aiGeneratedContent?: any;
+  }> {
     try {
       // Update user profile with test results
       const { error: profileError } = await this.supabase
@@ -449,13 +456,85 @@ usuario.edad = 26; // ✅ Permitido (modifica contenido)
 
       if (profileError) throw profileError;
 
-      // Generate personalized learning path
-      const learningPath = await this.generatePersonalizedLearningPath(result);
+      let aiGeneratedContent = null;
+      let learningPath: LearningPath | undefined;
 
-      // Generate initial lessons based on the learning path
-      await this.generateInitialLessons(userId, learningPath);
+      // Si tenemos datos de la prueba, generar contenido con IA usando la API
+      if (placementData) {
+        try {
+          console.log("🤖 Generando contenido personalizado con IA...");
 
-      return { success: true, learningPath };
+          // Llamar a la API para generar y guardar el contenido
+          const response = await fetch(
+            "/api/ai/generate-personalized-content",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify(placementData)
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error(`API call failed: ${response.status}`);
+          }
+
+          const apiResult = await response.json();
+          console.log("✅ Contenido generado y guardado en la base de datos");
+
+          // Usar el plan de aprendizaje generado por IA si está disponible
+          if (apiResult.learningPath) {
+            console.log("✅ Plan de aprendizaje generado por IA exitosamente");
+            // Convertir el plan de IA al formato esperado
+            learningPath = {
+              id: apiResult.learningPath.id,
+              title: apiResult.learningPath.title,
+              description: apiResult.learningPath.description,
+              topics: apiResult.learningPath.topics.map((topic: any) => ({
+                id: topic.id,
+                title: topic.title,
+                description: topic.description,
+                difficulty: topic.difficulty as "beginner" | "intermediate",
+                estimatedTime: topic.estimatedTime,
+                content: {
+                  explanation: topic.content.content,
+                  examples: topic.content.examples || [],
+                  exercises: (topic.content.exercises || []).map(
+                    (exercise: any) => ({
+                      ...exercise,
+                      difficulty: exercise.difficulty as
+                        | "beginner"
+                        | "intermediate"
+                    })
+                  )
+                }
+              })),
+              estimatedDuration: apiResult.learningPath.estimatedDuration
+            };
+
+            // El plan ya está guardado en la base de datos por la API
+            console.log(
+              "📊 Plan de aprendizaje ya guardado en la base de datos"
+            );
+          }
+        } catch (aiError) {
+          console.error(
+            "❌ Error generating AI content, falling back to traditional method:",
+            aiError
+          );
+          // Continuar con el método tradicional si falla la IA
+        }
+      }
+
+      // Fallback al método tradicional si no hay datos de IA o falló
+      if (!learningPath) {
+        console.log("📚 Generando plan de aprendizaje tradicional...");
+        learningPath = await this.generatePersonalizedLearningPath(result);
+        await this.generateInitialLessons(userId, learningPath);
+      }
+
+      return { success: true, learningPath, aiGeneratedContent };
     } catch (error) {
       console.error("Error completing user placement:", error);
       return { success: false };

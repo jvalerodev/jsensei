@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Brain, Clock, CheckCircle } from "lucide-react";
+import { PlacementTestData } from "@/lib/ai/schemas";
 
 interface Question {
   id: string;
@@ -18,6 +19,7 @@ interface Question {
   difficulty_level: string;
   points: number;
   explanation: string;
+  topic: string;
 }
 
 interface TestResult {
@@ -42,6 +44,7 @@ export default function PlacementTestPage() {
   >([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGeneratingContent, setIsGeneratingContent] = useState(false);
   const [testStartTime, setTestStartTime] = useState<number>(Date.now());
   const [questionStartTime, setQuestionStartTime] = useState<number>(
     Date.now()
@@ -175,9 +178,41 @@ export default function PlacementTestPage() {
         }))
       );
 
-      // Complete user placement and generate learning path
-      const { success, learningPath } =
-        await placementService.completeUserPlacement(user.id, placementResult);
+      // Create placement test data for AI content generation
+      const placementData: PlacementTestData = {
+        userId: user.id,
+        responses: answers.map((answer) => ({
+          questionId: answer.questionId,
+          selectedAnswer: answer.answer,
+          responseTime: answer.responseTime,
+          isCorrect: answer.isCorrect
+        })),
+        questions: questions.map((q) => ({
+          id: q.id,
+          question: q.question,
+          correct_answer: q.correct_answer,
+          difficulty_level: q.difficulty_level,
+          topic: q.topic,
+          points: q.points
+        })),
+        totalScore: placementResult.totalScore,
+        maxScore: placementResult.maxScore,
+        skillLevel: placementResult.skillLevel,
+        weakAreas: placementResult.weakAreas,
+        strongAreas: placementResult.strongAreas,
+        testDuration: Date.now() - testStartTime,
+        completedAt: new Date().toISOString()
+      };
+
+      // Complete user placement and generate learning path with AI
+      setIsGeneratingContent(true);
+      const { success, learningPath, aiGeneratedContent } =
+        await placementService.completeUserPlacement(
+          user.id,
+          placementResult,
+          placementData
+        );
+      setIsGeneratingContent(false);
 
       if (!success) {
         throw new Error("Failed to complete placement test");
@@ -194,10 +229,26 @@ export default function PlacementTestPage() {
 
       setTestResult(result);
       setTestCompleted(true);
+
+      // Log success with AI content info
+      if (aiGeneratedContent) {
+        console.log(
+          "🎉 Prueba completada exitosamente con contenido de IA generado"
+        );
+        console.log("📊 Plan de aprendizaje:", learningPath?.title);
+        console.log("📚 Temas generados:", learningPath?.topics.length);
+      } else {
+        console.log("📚 Prueba completada con plan de aprendizaje tradicional");
+      }
     } catch (error) {
-      console.error("Error completing test:", error);
+      console.error("❌ Error completing test:", error);
+      // Mostrar mensaje de error al usuario
+      alert(
+        "Hubo un error al completar la prueba. Por favor, inténtalo de nuevo."
+      );
     } finally {
       setIsSubmitting(false);
+      setIsGeneratingContent(false);
     }
   };
 
@@ -212,6 +263,40 @@ export default function PlacementTestPage() {
           <Brain className="w-12 h-12 text-blue-600 mx-auto mb-4 animate-pulse" />
           <p className="text-lg text-gray-600">Cargando test de ubicación...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (isGeneratingContent) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <Card className="w-full max-w-2xl shadow-xl border-0">
+          <CardHeader className="text-center">
+            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Brain className="w-8 h-8 text-blue-600 animate-pulse" />
+            </div>
+            <CardTitle className="text-2xl">
+              Generando tu Plan de Aprendizaje
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <p className="text-gray-600">
+              Nuestra IA está analizando tus respuestas para crear contenido
+              personalizado...
+            </p>
+            <div className="flex items-center justify-center space-x-2">
+              <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"></div>
+              <div
+                className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"
+                style={{ animationDelay: "0.1s" }}
+              ></div>
+              <div
+                className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"
+                style={{ animationDelay: "0.2s" }}
+              ></div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -377,10 +462,12 @@ export default function PlacementTestPage() {
           </div>
           <Button
             onClick={handleNextQuestion}
-            disabled={!selectedAnswer || isSubmitting}
+            disabled={!selectedAnswer || isSubmitting || isGeneratingContent}
             className="bg-blue-600 hover:bg-blue-700 px-8"
           >
-            {isSubmitting
+            {isGeneratingContent
+              ? "🤖 Generando contenido personalizado..."
+              : isSubmitting
               ? "Procesando..."
               : currentQuestionIndex === questions.length - 1
               ? "Finalizar Test"
