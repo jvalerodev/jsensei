@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS public.lessons (
   title TEXT NOT NULL,
   description TEXT,
   content JSONB NOT NULL, -- Stores lesson content and exercises
-  difficulty_level TEXT CHECK (difficulty_level IN ('beginner', 'intermediate', 'advanced')) NOT NULL,
+  difficulty_level TEXT CHECK (difficulty_level IN ('beginner', 'intermediate')) NOT NULL,
   order_index INTEGER NOT NULL,
   estimated_duration INTEGER DEFAULT 30, -- in minutes
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -48,10 +48,11 @@ CREATE TABLE IF NOT EXISTS public.placement_questions (
   question TEXT NOT NULL,
   options JSONB NOT NULL, -- Array of possible answers
   correct_answer TEXT NOT NULL,
-  difficulty_level TEXT CHECK (difficulty_level IN ('beginner', 'intermediate', 'advanced')) NOT NULL,
+  difficulty_level TEXT CHECK (difficulty_level IN ('beginner', 'intermediate')) NOT NULL,
   points INTEGER DEFAULT 1,
   explanation TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  topic TEXT NOT NULL
 );
 
 -- Create user placement test responses table
