@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
+import { getDatabase } from "@/lib/database/server";
 import { ContentGeneratorService } from "@/lib/ai/content-generator-service";
 import { z } from "zod";
 
@@ -71,51 +72,47 @@ export async function POST(request: NextRequest) {
     console.log("🔄 Resultado de la generación de contenido:");
     console.log(JSON.stringify(result));
 
-    // Guardar el análisis y plan de aprendizaje en la base de datos
-    const { error: analysisError } = await supabase
-      .from("placement_analysis")
-      .insert({
+    // Guardar el análisis y plan de aprendizaje en la base de datos usando los modelos
+    const db = await getDatabase();
+    
+    try {
+      await db.placementAnalysis.create({
         user_id: user.id,
         skill_level: result.analysis.skillLevel,
         weak_areas: result.analysis.weakAreas,
         strong_areas: result.analysis.strongAreas,
         recommended_topics: result.analysis.recommendedTopics,
-        personalized_advice: result.analysis.personalizedAdvice,
-        created_at: new Date().toISOString()
+        personalized_advice: result.analysis.personalizedAdvice
       });
-
-    if (analysisError) {
+    } catch (analysisError) {
       console.error("Error saving placement analysis:", analysisError);
     }
 
-    // Guardar el plan de aprendizaje
-    const { error: pathError } = await supabase.from("learning_paths").insert({
-      user_id: user.id,
-      path_id: result.learningPath.id,
-      title: result.learningPath.title,
-      description: result.learningPath.description,
-      topics: result.learningPath.topics,
-      estimated_duration: result.learningPath.estimatedDuration,
-      created_at: new Date().toISOString()
-    });
-
-    if (pathError) {
+    // Guardar el plan de aprendizaje usando el modelo
+    try {
+      await db.learningPaths.create({
+        user_id: user.id,
+        path_id: result.learningPath.id,
+        title: result.learningPath.title,
+        description: result.learningPath.description,
+        topics: result.learningPath.topics,
+        estimated_duration: result.learningPath.estimatedDuration
+      });
+    } catch (pathError) {
       console.error("Error saving learning path:", pathError);
     }
 
-    // Guardar el contenido inicial generado
+    // Guardar el contenido inicial generado usando el modelo
     for (const content of result.initialContent) {
-      const { error: contentError } = await supabase
-        .from("generated_content")
-        .insert({
+      try {
+        await db.generatedContent.create({
           user_id: user.id,
           topic: content.title,
           skill_level: result.analysis.skillLevel,
           content: content,
-          created_at: new Date().toISOString()
+          content_type: 'lesson'
         });
-
-      if (contentError) {
+      } catch (contentError) {
         console.error("Error saving initial content:", contentError);
       }
     }

@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { ContentGeneratorService } from "@/lib/ai/content-generator-service";
 import { createServerClient } from "@/lib/supabase/server";
+import { getDatabase } from "@/lib/database/server";
 
 export async function POST(request: NextRequest) {
   try {
@@ -35,22 +36,19 @@ export async function POST(request: NextRequest) {
       explanation || "Explicación del ejercicio"
     );
 
-    // Store user response and evaluation
-    const { error: insertError } = await supabase
-      .from("user_responses")
-      .insert({
+    // Store user response and evaluation using the database model
+    const db = await getDatabase();
+    
+    try {
+      await db.userResponses.create({
         user_id: user.id,
         exercise_id: exerciseId,
         user_answer: userAnswer,
         is_correct: evaluation.isCorrect,
-        feedback: evaluation.feedback,
         score: evaluation.score,
-        suggestions: evaluation.suggestions,
-        detailed_explanation: evaluation.detailedExplanation,
-        created_at: new Date().toISOString()
+        feedback: evaluation.feedback
       });
-
-    if (insertError) {
+    } catch (insertError) {
       console.error("Error storing response:", insertError);
     }
 

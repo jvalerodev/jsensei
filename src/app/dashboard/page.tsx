@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { createServerClient } from "@/lib/supabase/server";
+import { createServerDatabase } from "@/lib/database/server";
+import type { UserProgress } from "@/lib/database/types";
 import {
   Card,
   CardContent,
@@ -24,44 +26,31 @@ export default async function DashboardPage() {
     redirect("/auth/login");
   }
 
-  // Get user profile and progress
-  const { data: profile } = await supabase
-    .from("users")
-    .select("*")
-    .eq("id", user.id)
-    .single();
+  // Get user profile using the database model
+  const db = await createServerDatabase();
+  const profile = await db.users.findById(user.id);
 
   // Check if user needs to take placement test
   if (!profile?.placement_test_completed) {
     redirect("/placement-test");
   }
 
-  // Get user progress
-  const { data: progress } = await supabase
-    .from("user_progress")
-    .select("*")
-    .eq("user_id", user.id);
+  // Get user progress using the database model
+  const progressResult = await db.userProgress.getUserProgress(user.id);
+  const progress = progressResult.data;
 
-  // Get lessons for the user's level
-  const { data: lessons } = await supabase
-    .from("lessons")
-    .select("*")
-    .eq("difficulty_level", profile.skill_level)
-    .order("order_index");
+  // Get lessons for the user's level using the database model
+  const lessons = await db.lessons.findByDifficulty(profile.skill_level);
 
-  // Get recent placement responses for activity
-  const { data: recentActivity } = await supabase
-    .from("placement_responses")
-    .select("*, placement_questions(question)")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(5);
+  // Get recent placement responses for activity using the database model
+  const recentActivityResult = await db.placementResponses.findAll({ user_id: user.id }, { limit: 5, orderBy: 'created_at', orderDirection: 'desc' });
+  const recentActivity = recentActivityResult.data;
 
   // Calculate overall progress
   const totalTopics = 12; // Total JavaScript topics
-  const completedTopics =
-    progress?.filter((p) => p.completion_percentage >= 80).length || 0;
-  const overallProgress = Math.round((completedTopics / totalTopics) * 100);
+  const completedLessons =
+    progress?.filter((p: UserProgress) => p.status === 'completed').length || 0;
+  const overallProgress = Math.round((completedLessons / totalTopics) * 100);
 
   // Learning path based on user level
   const learningPath = getLearningPath(profile?.skill_level || "principiante");
@@ -113,7 +102,7 @@ export default async function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                {completedTopics}/{totalTopics}
+                {completedLessons}/{totalTopics}
               </div>
               <p className="text-xs text-slate-600 mt-1">temas dominados</p>
             </CardContent>
@@ -163,13 +152,11 @@ export default async function DashboardPage() {
               <CardContent>
                 <div className="space-y-4">
                   {learningPath.map((topic, index) => {
-                    const topicProgress = progress?.find(
-                      (p) => p.topic === topic.id
-                    );
-                    const isCompleted =
-                      (topicProgress?.completion_percentage || 0) >= 80;
-                    const isCurrent = index === completedTopics;
-                    const isLocked = index > completedTopics;
+                    // For now, we'll use a simplified logic since we track lessons, not topics
+                    // In a real implementation, you'd need to map topics to lessons
+                    const isCompleted = index < completedLessons;
+                    const isCurrent = index === completedLessons;
+                    const isLocked = index > completedLessons;
 
                     return (
                       <div
@@ -279,7 +266,7 @@ export default async function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {recentActivity?.slice(0, 3).map((activity, index) => (
+                  {recentActivity?.slice(0, 3).map((activity: any, index: number) => (
                     <div
                       key={index}
                       className="flex items-center gap-3 text-sm"

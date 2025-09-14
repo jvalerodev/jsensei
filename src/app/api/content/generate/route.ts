@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { generateContent } from "@/lib/ai/content-generator";
 import { createServerClient } from "@/lib/supabase/server";
+import { getDatabase } from "@/lib/database/server";
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,23 +33,23 @@ export async function POST(request: NextRequest) {
       userId: user.id
     });
 
-    // Store generated content in database
-    const { error: insertError } = await supabase
-      .from("generated_content")
-      .insert({
+    // Store generated content in database using the model
+    const db = await getDatabase();
+    
+    try {
+      await db.generatedContent.create({
         user_id: user.id,
         topic,
-        level,
-        type,
-        title: content.title,
-        content: content.content,
-        metadata: {
+        skill_level: level,
+        content: {
+          title: content.title,
+          content: content.content,
           exercises: content.exercises,
           examples: content.examples
-        }
+        },
+        content_type: type
       });
-
-    if (insertError) {
+    } catch (insertError) {
       console.error("Error storing content:", insertError);
     }
 

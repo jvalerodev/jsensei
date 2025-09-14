@@ -1,5 +1,5 @@
 // Placement Test Service - Handles test evaluation and personalized content generation
-import { createClient } from "@/lib/supabase/client";
+import { createClientDatabase } from "@/lib/database";
 import { ContentGeneratorService } from "./content-generator-service";
 import { type PlacementTestData } from "./schemas";
 
@@ -53,7 +53,9 @@ export interface Exercise {
 }
 
 export class PlacementService {
-  private supabase = createClient();
+  private getDb() {
+    return createClientDatabase();
+  }
 
   /**
    * Evaluate placement test responses and determine user skill level
@@ -66,16 +68,12 @@ export class PlacementService {
       responseTime: number;
     }>
   ): Promise<PlacementResult> {
-    // Get questions with their details
-    const { data: questions } = await this.supabase
-      .from("placement_questions")
-      .select("*")
-      .in(
-        "id",
-        responses.map((r) => r.questionId)
-      );
+    // Get questions with their details using the model
+    const db = this.getDb();
+    const questionIds = responses.map((r) => r.questionId);
+    const questions = await db.placementQuestions.findByIds(questionIds);
 
-    if (!questions) throw new Error("Failed to load questions");
+    if (!questions || questions.length === 0) throw new Error("Failed to load questions");
 
     // Calculate results
     let totalScore = 0;
@@ -89,7 +87,7 @@ export class PlacementService {
     };
 
     responses.forEach((response) => {
-      const question = questions.find((q) => q.id === response.questionId);
+      const question = questions.find((q: any) => q.id === response.questionId);
       if (!question) return;
 
       const isCorrect = response.selectedAnswer === question.correct_answer;
@@ -107,7 +105,7 @@ export class PlacementService {
       }
     });
 
-    const maxScore = questions.reduce((sum, q) => sum + q.points, 0);
+    const maxScore = questions.reduce((sum: number, q: any) => sum + q.points, 0);
     const percentage = (totalScore / maxScore) * 100;
 
     // Determine skill level with more nuanced logic
@@ -443,18 +441,15 @@ usuario.edad = 26; // ✅ Permitido (modifica contenido)
     aiGeneratedContent?: any;
   }> {
     try {
-      // Update user profile with test results
-      const { error: profileError } = await this.supabase
-        .from("users")
-        .update({
-          placement_test_completed: true,
-          placement_test_score: result.totalScore,
-          skill_level: result.skillLevel,
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", userId);
+      // Update user profile with test results using the model
+      const db = this.getDb();
+      const updatedUser = await db.users.update(userId, {
+        placement_test_completed: true,
+        placement_test_score: result.totalScore,
+        skill_level: result.skillLevel
+      });
 
-      if (profileError) throw profileError;
+      if (!updatedUser) throw new Error("Failed to update user profile");
 
       let aiGeneratedContent = null;
       let learningPath: LearningPath | undefined;
@@ -561,7 +556,8 @@ usuario.edad = 26; // ✅ Permitido (modifica contenido)
         estimatedTime: topic.estimatedTime
       };
 
-      await this.supabase.from("lessons").insert({
+      const db = this.getDb();
+      await db.lessons.create({
         title: topic.title,
         description: topic.description,
         content: lessonContent,
@@ -580,11 +576,8 @@ usuario.edad = 26; // ✅ Permitido (modifica contenido)
     placementCompleted: boolean;
     testScore?: number;
   }> {
-    const { data: profile } = await this.supabase
-      .from("users")
-      .select("skill_level, placement_test_completed, placement_test_score")
-      .eq("id", userId)
-      .single();
+    const db = this.getDb();
+    const profile = await db.users.findById(userId);
 
     return {
       skillLevel: profile?.skill_level || "beginner",
