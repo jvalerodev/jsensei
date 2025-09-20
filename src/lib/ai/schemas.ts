@@ -50,7 +50,21 @@ export const PlacementAnalysisSchema = z.object({
   personalizedAdvice: z.string()
 });
 
-// Esquema simplificado para la generación de IA (sin IDs)
+// Esquema simplificado y conciso para la generación de learning path
+export const LearningPathSchema = z.object({
+  title: z.string(),
+  description: z.string(),
+  topics: z.array(
+    z.object({
+      title: z.string(),
+      objective: z.string(), // Objetivo específico del módulo
+      topics: z.array(z.string()) // Lista de tópicos que se tratarán
+    })
+  ),
+  estimatedDuration: z.number()
+});
+
+// Esquema simplificado para la generación de IA (sin IDs) - DEPRECATED
 export const SimpleLearningPathSchema = z.object({
   title: z.string(),
   description: z.string(),
@@ -80,23 +94,6 @@ export const SimpleLearningPathSchema = z.object({
   estimatedDuration: z.number()
 });
 
-export const LearningPathSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  description: z.string(),
-  topics: z.array(
-    z.object({
-      id: z.string(),
-      title: z.string(),
-      description: z.string(),
-      difficulty: z.enum(["beginner", "intermediate"]),
-      estimatedTime: z.number(),
-      content: GeneratedContentSchema
-    })
-  ),
-  estimatedDuration: z.number()
-});
-
 // Tipos TypeScript derivados de los esquemas
 export type CodeExample = z.infer<typeof CodeExampleSchema>;
 export type Exercise = z.infer<typeof ExerciseSchema>;
@@ -106,8 +103,10 @@ export type SimpleGeneratedContent = z.infer<
   typeof SimpleGeneratedContentSchema
 >;
 export type PlacementAnalysis = z.infer<typeof PlacementAnalysisSchema>;
+export type LearningPath = z.infer<typeof LearningPathSchema> & {
+  id: string;
+};
 export type SimpleLearningPath = z.infer<typeof SimpleLearningPathSchema>;
-export type LearningPath = z.infer<typeof LearningPathSchema>;
 
 // Interfaces para datos de entrada
 export interface PlacementTestData {

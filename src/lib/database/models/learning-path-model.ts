@@ -1,19 +1,23 @@
 // Learning path model - handles personalized learning paths
-import { SupabaseClient } from '@supabase/supabase-js';
-import { BaseModel } from '../base-model';
-import { 
-  LearningPath, 
-  CreateLearningPathData, 
+import { SupabaseClient } from "@supabase/supabase-js";
+import { BaseModel } from "../base-model";
+import {
+  LearningPath,
+  CreateLearningPathData,
   PlacementAnalysis,
   CreatePlacementAnalysisData,
   SkillLevel,
   QueryOptions,
-  PaginatedResult 
-} from '../types';
+  PaginatedResult
+} from "../types";
 
-export class LearningPathModel extends BaseModel<LearningPath, CreateLearningPathData, Partial<CreateLearningPathData>> {
+export class LearningPathModel extends BaseModel<
+  LearningPath,
+  CreateLearningPathData,
+  Partial<CreateLearningPathData>
+> {
   constructor(supabase: SupabaseClient) {
-    super(supabase, 'learning_paths');
+    super(supabase, "learning_paths");
   }
 
   /**
@@ -21,17 +25,16 @@ export class LearningPathModel extends BaseModel<LearningPath, CreateLearningPat
    */
   async create(pathData: CreateLearningPathData): Promise<LearningPath> {
     this.validateRequired(pathData, [
-      'user_id', 
-      'path_id', 
-      'title', 
-      'description', 
-      'topics', 
-      'estimated_duration'
+      "user_id",
+      "path_id",
+      "title",
+      "description",
+      "topics",
+      "estimated_duration"
     ]);
 
     const sanitizedData = this.sanitizeData({
       ...pathData,
-      topics: JSON.stringify(pathData.topics),
       created_at: new Date().toISOString()
     });
 
@@ -42,14 +45,17 @@ export class LearningPathModel extends BaseModel<LearningPath, CreateLearningPat
    * Get user's learning paths
    */
   async getUserPaths(
-    userId: string, 
+    userId: string,
     options: QueryOptions = {}
   ): Promise<PaginatedResult<LearningPath>> {
-    const result = await this.findAll({ user_id: userId }, {
-      ...options,
-      orderBy: options.orderBy || 'created_at',
-      orderDirection: options.orderDirection || 'desc'
-    });
+    const result = await this.findAll(
+      { user_id: userId },
+      {
+        ...options,
+        orderBy: options.orderBy || "created_at",
+        orderDirection: options.orderDirection || "desc"
+      }
+    );
 
     return {
       ...result,
@@ -64,14 +70,14 @@ export class LearningPathModel extends BaseModel<LearningPath, CreateLearningPat
     try {
       const { data, error } = await this.supabase
         .from(this.tableName)
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
         .limit(1)
         .single();
 
       if (error) {
-        if (error.code === 'PGRST116') {
+        if (error.code === "PGRST116") {
           return null;
         }
         throw this.handleError(error);
@@ -90,12 +96,12 @@ export class LearningPathModel extends BaseModel<LearningPath, CreateLearningPat
     try {
       const { data, error } = await this.supabase
         .from(this.tableName)
-        .select('*')
-        .eq('path_id', pathId)
+        .select("*")
+        .eq("path_id", pathId)
         .single();
 
       if (error) {
-        if (error.code === 'PGRST116') {
+        if (error.code === "PGRST116") {
           return null;
         }
         throw this.handleError(error);
@@ -113,9 +119,10 @@ export class LearningPathModel extends BaseModel<LearningPath, CreateLearningPat
   private parsePath(pathData: any): LearningPath {
     return {
       ...pathData,
-      topics: typeof pathData.topics === 'string' 
-        ? JSON.parse(pathData.topics) 
-        : pathData.topics
+      topics:
+        typeof pathData.topics === "string"
+          ? JSON.parse(pathData.topics)
+          : pathData.topics
     };
   }
 
@@ -128,29 +135,32 @@ export class LearningPathModel extends BaseModel<LearningPath, CreateLearningPat
   }
 }
 
-export class PlacementAnalysisModel extends BaseModel<PlacementAnalysis, CreatePlacementAnalysisData, Partial<CreatePlacementAnalysisData>> {
+export class PlacementAnalysisModel extends BaseModel<
+  PlacementAnalysis,
+  CreatePlacementAnalysisData,
+  Partial<CreatePlacementAnalysisData>
+> {
   constructor(supabase: SupabaseClient) {
-    super(supabase, 'placement_analysis');
+    super(supabase, "placement_analysis");
   }
 
   /**
    * Create placement analysis with validation
    */
-  async create(analysisData: CreatePlacementAnalysisData): Promise<PlacementAnalysis> {
+  async create(
+    analysisData: CreatePlacementAnalysisData
+  ): Promise<PlacementAnalysis> {
     this.validateRequired(analysisData, [
-      'user_id', 
-      'skill_level', 
-      'weak_areas', 
-      'strong_areas', 
-      'recommendations', 
-      'analysis_data'
+      "user_id",
+      "skill_level",
+      "weak_areas",
+      "strong_areas",
+      "recommended_topics",
+      "personalized_advice"
     ]);
 
     const sanitizedData = this.sanitizeData({
       ...analysisData,
-      weak_areas: JSON.stringify(analysisData.weak_areas),
-      strong_areas: JSON.stringify(analysisData.strong_areas),
-      recommended_topics: JSON.stringify(analysisData.recommended_topics),
       created_at: new Date().toISOString()
     });
 
@@ -164,14 +174,14 @@ export class PlacementAnalysisModel extends BaseModel<PlacementAnalysis, CreateP
     try {
       const { data, error } = await this.supabase
         .from(this.tableName)
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
         .limit(1)
         .single();
 
       if (error) {
-        if (error.code === 'PGRST116') {
+        if (error.code === "PGRST116") {
           return null;
         }
         throw this.handleError(error);
@@ -204,18 +214,22 @@ export class PlacementAnalysisModel extends BaseModel<PlacementAnalysis, CreateP
   private parseAnalysis(analysisData: any): PlacementAnalysis {
     return {
       ...analysisData,
-      weak_areas: typeof analysisData.weak_areas === 'string' 
-        ? JSON.parse(analysisData.weak_areas) 
-        : analysisData.weak_areas,
-      strong_areas: typeof analysisData.strong_areas === 'string' 
-        ? JSON.parse(analysisData.strong_areas) 
-        : analysisData.strong_areas,
-      recommendations: typeof analysisData.recommendations === 'string' 
-        ? JSON.parse(analysisData.recommendations) 
-        : analysisData.recommendations,
-      analysis_data: typeof analysisData.analysis_data === 'string' 
-        ? JSON.parse(analysisData.analysis_data) 
-        : analysisData.analysis_data
+      weak_areas:
+        typeof analysisData.weak_areas === "string"
+          ? JSON.parse(analysisData.weak_areas)
+          : analysisData.weak_areas,
+      strong_areas:
+        typeof analysisData.strong_areas === "string"
+          ? JSON.parse(analysisData.strong_areas)
+          : analysisData.strong_areas,
+      recommendations:
+        typeof analysisData.recommendations === "string"
+          ? JSON.parse(analysisData.recommendations)
+          : analysisData.recommendations,
+      analysis_data:
+        typeof analysisData.analysis_data === "string"
+          ? JSON.parse(analysisData.analysis_data)
+          : analysisData.analysis_data
     };
   }
 

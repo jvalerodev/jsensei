@@ -2,6 +2,7 @@
 import { createClientDatabase } from "@/lib/database";
 import { ContentGeneratorService } from "./content-generator-service";
 import { type PlacementTestData } from "./schemas";
+import { randomUUID } from "node:crypto";
 
 export interface PlacementResult {
   skillLevel: "beginner" | "intermediate";
@@ -18,7 +19,11 @@ export interface LearningPath {
   id: string;
   title: string;
   description: string;
-  topics: LearningTopic[];
+  topics: Array<{
+    title: string;
+    objective: string;
+    topics: string[];
+  }>;
   estimatedDuration: number; // in hours
 }
 
@@ -73,7 +78,8 @@ export class PlacementService {
     const questionIds = responses.map((r) => r.questionId);
     const questions = await db.placementQuestions.findByIds(questionIds);
 
-    if (!questions || questions.length === 0) throw new Error("Failed to load questions");
+    if (!questions || questions.length === 0)
+      throw new Error("Failed to load questions");
 
     // Calculate results
     let totalScore = 0;
@@ -105,7 +111,10 @@ export class PlacementService {
       }
     });
 
-    const maxScore = questions.reduce((sum: number, q: any) => sum + q.points, 0);
+    const maxScore = questions.reduce(
+      (sum: number, q: any) => sum + q.points,
+      0
+    );
     const percentage = (totalScore / maxScore) * 100;
 
     // Determine skill level with more nuanced logic
@@ -143,46 +152,139 @@ export class PlacementService {
   /**
    * Generate personalized learning path based on placement test results
    */
-  async generatePersonalizedLearningPath(
-    result: PlacementResult
-  ): Promise<LearningPath> {
-    const topics = await this.generateTopicsForLevel(
-      result.skillLevel,
-      result.weakAreas
-    );
+  async generateLearningPath(result: PlacementResult): Promise<LearningPath> {
+    const topics = this.getTopicsForLevel(result.skillLevel, result.weakAreas);
 
     return {
-      id: `path-${result.skillLevel}-${Date.now()}`,
-      title: `JavaScript ${this.getLevelName(result.skillLevel)}`,
+      id: randomUUID(),
+      title: `Plan de Aprendizaje JavaScript - ${this.getLevelName(
+        result.skillLevel
+      )}`,
       description: this.getPathDescription(result),
       topics,
-      estimatedDuration:
-        topics.reduce((sum, topic) => sum + topic.estimatedTime, 0) / 60
+      estimatedDuration: topics.length * 2 // Estimate 2 hours per module
     };
   }
 
   /**
    * Generate topics based on skill level and weak areas
    */
-  private async generateTopicsForLevel(
+  private getTopicsForLevel(
     level: "beginner" | "intermediate",
     weakAreas: string[]
-  ): Promise<LearningTopic[]> {
-    const topicTemplates = this.getTopicTemplates(level);
+  ): Array<{
+    title: string;
+    objective: string;
+    topics: string[];
+  }> {
+    const templates = {
+      beginner: [
+        {
+          title: "Fundamentos de JavaScript Moderno",
+          objective: "Dominar las bases del lenguaje con sintaxis moderna",
+          topics: [
+            "Variables (let, const)",
+            "Tipos de datos",
+            "Operadores",
+            "Condicionales",
+            "Bucles básicos"
+          ]
+        },
+        {
+          title: "Funciones y Scope",
+          objective: "Entender cómo crear y usar funciones efectivamente",
+          topics: [
+            "Declaración de funciones",
+            "Arrow functions",
+            "Parámetros y argumentos",
+            "Scope y hoisting",
+            "Funciones anónimas"
+          ]
+        },
+        {
+          title: "Estructuras de Datos Básicas",
+          objective: "Manipular arrays y objetos con confianza",
+          topics: [
+            "Arrays y métodos básicos",
+            "Objetos y propiedades",
+            "Destructuring básico",
+            "Template literals",
+            "JSON"
+          ]
+        },
+        {
+          title: "DOM y Eventos",
+          objective: "Interactuar con elementos HTML dinámicamente",
+          topics: [
+            "Selección de elementos",
+            "Manipulación del DOM",
+            "Event listeners",
+            "Formularios",
+            "Validación básica"
+          ]
+        }
+      ],
+      intermediate: [
+        {
+          title: "Programación Asíncrona",
+          objective:
+            "Manejar operaciones asíncronas con Promises y async/await",
+          topics: [
+            "Promises",
+            "async/await",
+            "Fetch API",
+            "Manejo de errores",
+            "Promise.all y Promise.race"
+          ]
+        },
+        {
+          title: "Métodos de Array Avanzados",
+          objective: "Procesar datos eficientemente con métodos funcionales",
+          topics: [
+            "map, filter, reduce",
+            "find, some, every",
+            "sort y reverse",
+            "Chaining methods",
+            "Inmutabilidad"
+          ]
+        },
+        {
+          title: "Módulos y Organización",
+          objective: "Estructurar código de manera modular y mantenible",
+          topics: [
+            "ES6 Modules",
+            "Import/Export",
+            "Module bundlers",
+            "Namespacing",
+            "Code splitting"
+          ]
+        },
+        {
+          title: "Conceptos Avanzados",
+          objective: "Comprender conceptos fundamentales de JavaScript",
+          topics: [
+            "Closures",
+            "Prototipos",
+            "This keyword",
+            "Call, apply, bind",
+            "Decorators"
+          ]
+        },
+        {
+          title: "Manejo de Errores y Testing",
+          objective: "Escribir código robusto y confiable",
+          topics: [
+            "Try/catch/finally",
+            "Custom errors",
+            "Debugging",
+            "Unit testing",
+            "Mejores prácticas"
+          ]
+        }
+      ]
+    };
 
-    // Prioritize topics based on weak areas
-    const prioritizedTopics = topicTemplates.sort((a, b) => {
-      const aIsWeak = weakAreas.includes(a.difficulty);
-      const bIsWeak = weakAreas.includes(b.difficulty);
-      if (aIsWeak && !bIsWeak) return -1;
-      if (!aIsWeak && bIsWeak) return 1;
-      return 0;
-    });
-
-    return prioritizedTopics.map((template) => ({
-      ...template,
-      content: this.generateTopicContent(template)
-    }));
+    return templates[level] || templates.beginner;
   }
 
   /**
@@ -478,39 +580,27 @@ usuario.edad = 26; // ✅ Permitido (modifica contenido)
           const apiResult = await response.json();
           console.log("✅ Contenido generado y guardado en la base de datos");
 
-          // Usar el plan de aprendizaje generado por IA si está disponible
+          // Usar el plan de aprendizaje conciso generado por IA si está disponible
           if (apiResult.learningPath) {
-            console.log("✅ Plan de aprendizaje generado por IA exitosamente");
+            console.log(
+              "✅ Plan de aprendizaje conciso generado por IA exitosamente"
+            );
             // Convertir el plan de IA al formato esperado
             learningPath = {
               id: apiResult.learningPath.id,
               title: apiResult.learningPath.title,
               description: apiResult.learningPath.description,
               topics: apiResult.learningPath.topics.map((topic: any) => ({
-                id: topic.id,
                 title: topic.title,
-                description: topic.description,
-                difficulty: topic.difficulty as "beginner" | "intermediate",
-                estimatedTime: topic.estimatedTime,
-                content: {
-                  explanation: topic.content.content,
-                  examples: topic.content.examples || [],
-                  exercises: (topic.content.exercises || []).map(
-                    (exercise: any) => ({
-                      ...exercise,
-                      difficulty: exercise.difficulty as
-                        | "beginner"
-                        | "intermediate"
-                    })
-                  )
-                }
+                objective: topic.objective,
+                topics: topic.topics
               })),
               estimatedDuration: apiResult.learningPath.estimatedDuration
             };
 
             // El plan ya está guardado en la base de datos por la API
             console.log(
-              "📊 Plan de aprendizaje ya guardado en la base de datos"
+              "📊 Plan de aprendizaje conciso ya guardado en la base de datos"
             );
           }
         } catch (aiError) {
@@ -524,47 +614,14 @@ usuario.edad = 26; // ✅ Permitido (modifica contenido)
 
       // Fallback al método tradicional si no hay datos de IA o falló
       if (!learningPath) {
-        console.log("📚 Generando plan de aprendizaje tradicional...");
-        learningPath = await this.generatePersonalizedLearningPath(result);
-        await this.generateInitialLessons(userId, learningPath);
+        console.log("📚 Generando plan de aprendizaje conciso tradicional...");
+        learningPath = await this.generateLearningPath(result);
       }
 
       return { success: true, learningPath, aiGeneratedContent };
     } catch (error) {
       console.error("Error completing user placement:", error);
       return { success: false };
-    }
-  }
-
-  /**
-   * Generate initial lessons for the user
-   */
-  private async generateInitialLessons(
-    userId: string,
-    learningPath: LearningPath
-  ): Promise<void> {
-    const lessonsToCreate = learningPath.topics.slice(0, 3); // Start with first 3 topics
-
-    for (let i = 0; i < lessonsToCreate.length; i++) {
-      const topic = lessonsToCreate[i];
-
-      const lessonContent = {
-        type: "lesson",
-        explanation: topic.content.explanation,
-        examples: topic.content.examples,
-        exercises: topic.content.exercises,
-        estimatedTime: topic.estimatedTime
-      };
-
-      const db = this.getDb();
-      await db.lessons.create({
-        title: topic.title,
-        description: topic.description,
-        content: lessonContent,
-        difficulty_level: topic.difficulty,
-        order_index: i + 1,
-        estimated_duration: topic.estimatedTime
-      });
     }
   }
 

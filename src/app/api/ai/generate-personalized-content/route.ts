@@ -64,17 +64,14 @@ export async function POST(request: NextRequest) {
       completedAt: new Date().toISOString()
     };
 
-    // Generar contenido personalizado basado en la prueba de nivelación
+    // Generar análisis y plan de aprendizaje conciso basado en la prueba de nivelación
     const result = await ContentGeneratorService.generatePersonalizedContent(
       placementData
     );
 
-    console.log("🔄 Resultado de la generación de contenido:");
-    console.log(JSON.stringify(result));
-
     // Guardar el análisis y plan de aprendizaje en la base de datos usando los modelos
     const db = await getDatabase();
-    
+
     try {
       await db.placementAnalysis.create({
         user_id: user.id,
@@ -88,7 +85,7 @@ export async function POST(request: NextRequest) {
       console.error("Error saving placement analysis:", analysisError);
     }
 
-    // Guardar el plan de aprendizaje usando el modelo
+    // Guardar el plan de aprendizaje conciso usando el modelo
     try {
       await db.learningPaths.create({
         user_id: user.id,
@@ -102,26 +99,10 @@ export async function POST(request: NextRequest) {
       console.error("Error saving learning path:", pathError);
     }
 
-    // Guardar el contenido inicial generado usando el modelo
-    for (const content of result.initialContent) {
-      try {
-        await db.generatedContent.create({
-          user_id: user.id,
-          topic: content.title,
-          skill_level: result.analysis.skillLevel,
-          content: content,
-          content_type: 'lesson'
-        });
-      } catch (contentError) {
-        console.error("Error saving initial content:", contentError);
-      }
-    }
-
     return NextResponse.json({
       success: true,
       analysis: result.analysis,
-      learningPath: result.learningPath,
-      initialContent: result.initialContent
+      learningPath: result.learningPath
     });
   } catch (error) {
     console.error("Error generating personalized content:", error);
