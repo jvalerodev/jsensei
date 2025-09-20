@@ -50,7 +50,6 @@ export class AIService {
       const prompt = this.buildLearningPathPrompt(analysis);
 
       console.log("🤖 Generando plan de aprendizaje conciso con IA...");
-      console.log("📊 Análisis:", analysis);
 
       const result = await generateObject({
         model: ollama(this.DEFAULT_MODEL),
@@ -59,8 +58,8 @@ export class AIService {
         temperature: 0.7
       });
 
-      console.log("✅ Plan de aprendizaje conciso generado exitosamente");
-      return { id: randomUUID(), ...result.object };
+      console.log("✅ Plan de aprendizaje generado exitosamente");
+      return result.object;
     } catch (error) {
       console.error("❌ Error generating learning path:", error);
       throw new Error("Error al generar el plan de aprendizaje");

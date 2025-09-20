@@ -52,6 +52,7 @@ export const PlacementAnalysisSchema = z.object({
 
 // Esquema simplificado y conciso para la generación de learning path
 export const LearningPathSchema = z.object({
+  id: z.string().optional(),
   title: z.string(),
   description: z.string(),
   topics: z.array(
@@ -103,9 +104,7 @@ export type SimpleGeneratedContent = z.infer<
   typeof SimpleGeneratedContentSchema
 >;
 export type PlacementAnalysis = z.infer<typeof PlacementAnalysisSchema>;
-export type LearningPath = z.infer<typeof LearningPathSchema> & {
-  id: string;
-};
+export type LearningPath = z.infer<typeof LearningPathSchema>;
 export type SimpleLearningPath = z.infer<typeof SimpleLearningPathSchema>;
 
 // Interfaces para datos de entrada

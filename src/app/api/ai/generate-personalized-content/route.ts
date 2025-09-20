@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     try {
       await db.learningPaths.create({
         user_id: user.id,
-        path_id: result.learningPath.id,
+        path_id: result.learningPath.id!,
         title: result.learningPath.title,
         description: result.learningPath.description,
         topics: result.learningPath.topics,

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { AIService } from "./ai-service";
 import {
   type PlacementAnalysis,
@@ -25,8 +26,15 @@ export class ContentGeneratorService {
 
       // 2. Generar plan de aprendizaje conciso y personalizado
       const learningPath = await AIService.generateLearningPath(analysis);
+      const topics = learningPath.topics.map((topic) => ({
+        ...topic,
+        id: randomUUID()
+      }));
 
-      return { analysis, learningPath };
+      return {
+        analysis,
+        learningPath: { ...learningPath, id: randomUUID(), topics }
+      };
     } catch (error) {
       console.error("Error generating personalized content:", error);
       throw new Error("Error al generar contenido personalizado");
