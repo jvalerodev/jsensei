@@ -562,16 +562,13 @@ usuario.edad = 26; // ✅ Permitido (modifica contenido)
           console.log("🤖 Generando contenido personalizado con IA...");
 
           // Llamar a la API para generar y guardar el contenido
-          const response = await fetch(
-            "/api/ai/generate-personalized-content",
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json"
-              },
-              body: JSON.stringify(placementData)
-            }
-          );
+          const response = await fetch("/api/ai/evaluate-placement-test", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(placementData)
+          });
 
           if (!response.ok) {
             throw new Error(`API call failed: ${response.status}`);
