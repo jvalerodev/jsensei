@@ -37,9 +37,10 @@ export async function POST(request: NextRequest) {
     const db = await getDatabase();
     
     try {
-      await db.generatedContent.create({
+      await db.contents.create({
         user_id: user.id,
-        topic,
+        title: content.title,
+        content_type: type,
         skill_level: level,
         content: {
           title: content.title,
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest) {
           exercises: content.exercises,
           examples: content.examples
         },
-        content_type: type
+        is_generated_by_ai: true
       });
     } catch (insertError) {
       console.error("Error storing content:", insertError);

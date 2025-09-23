@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { createClientDatabase } from "@/lib/database";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -14,18 +15,20 @@ import { PlacementTestData } from "@/lib/ai/schemas";
 interface Question {
   id: string;
   question: string;
-  options: string[];
+  options: any; // JSONB array de opciones
   correct_answer: string;
-  difficulty_level: string;
-  points: number;
-  explanation: string;
+  explanation?: string;
   topic: string;
+  difficulty_level: "beginner" | "intermediate";
+  points: number;
+  is_active: boolean;
+  created_at: string;
 }
 
 interface TestResult {
   totalScore: number;
   maxScore: number;
-  skillLevel: "beginner" | "intermediate" | "advanced";
+  skillLevel: "beginner" | "intermediate";
   correctAnswers: number;
   totalQuestions: number;
 }
@@ -72,41 +75,23 @@ export default function PlacementTestPage() {
       }
       setUser(currentUser);
 
-      // Check if user already completed placement test
-      const { data: profile } = await supabase
-        .from("users")
-        .select("placement_test_completed")
-        .eq("id", currentUser.id)
-        .single();
+      // Initialize database service
+      const db = createClientDatabase();
 
-      if (profile?.placement_test_completed) {
+      // Check if user already completed placement test
+      const userProfile = await db.users.findById(currentUser.id);
+      if (userProfile?.placement_test_completed) {
         router.push("/dashboard");
         return;
       }
 
-      // Load questions (mix of all difficulty levels)
-      const { data: questionsData, error } = await supabase
-        .from("placement_questions")
-        .select("*")
-        .order("difficulty_level", { ascending: true });
-
-      if (error) throw error;
-
-      // Select a balanced mix of questions (5 beginner, 4 intermediate, 3 advanced)
-      const beginnerQuestions = questionsData
-        .filter((q) => q.difficulty_level === "beginner")
-        .slice(0, 5);
-      const intermediateQuestions = questionsData
-        .filter((q) => q.difficulty_level === "intermediate")
-        .slice(0, 4);
-      const advancedQuestions = questionsData
-        .filter((q) => q.difficulty_level === "advanced")
-        .slice(0, 3);
+      // Load active questions using the model
+      const beginnerQuestions = await db.placementTests.getQuestionsByDifficulty("beginner", { limit: 6 });
+      const intermediateQuestions = await db.placementTests.getQuestionsByDifficulty("intermediate", { limit: 6 });
 
       const selectedQuestions = [
-        ...beginnerQuestions,
-        ...intermediateQuestions,
-        ...advancedQuestions
+        ...beginnerQuestions.data,
+        ...intermediateQuestions.data
       ];
 
       setQuestions(selectedQuestions);
@@ -154,13 +139,17 @@ export default function PlacementTestPage() {
     setIsSubmitting(true);
 
     try {
-      // Save responses to database first
+      // Initialize database service
+      const db = createClientDatabase();
+
+      // Save responses to database first using the model
       for (let i = 0; i < answers.length; i++) {
         const answer = answers[i];
-        await supabase.from("placement_responses").insert({
+        await db.userInteractions.create({
           user_id: user.id,
-          question_id: answer.questionId,
-          selected_answer: answer.answer,
+          placement_test_id: answer.questionId,
+          interaction_type: 'placement_answer',
+          user_answer: answer.answer,
           is_correct: answer.isCorrect,
           response_time: answer.responseTime
         });
@@ -328,17 +317,13 @@ export default function PlacementTestPage() {
                   className={`w-4 h-4 rounded-full ${
                     testResult.skillLevel === "beginner"
                       ? "bg-green-500"
-                      : testResult.skillLevel === "intermediate"
-                      ? "bg-yellow-500"
-                      : "bg-red-500"
+                      : "bg-yellow-500"
                   }`}
                 />
                 <span className="font-medium capitalize">
                   {testResult.skillLevel === "beginner"
                     ? "Principiante"
-                    : testResult.skillLevel === "intermediate"
-                    ? "Intermedio"
-                    : "Avanzado"}
+                    : "Intermedio"}
                 </span>
               </div>
               <p className="text-sm text-gray-600 mt-2">
@@ -402,17 +387,13 @@ export default function PlacementTestPage() {
                   className={`w-3 h-3 rounded-full ${
                     currentQuestion?.difficulty_level === "beginner"
                       ? "bg-green-500"
-                      : currentQuestion?.difficulty_level === "intermediate"
-                      ? "bg-yellow-500"
-                      : "bg-red-500"
+                      : "bg-yellow-500"
                   }`}
                 />
                 <span className="text-sm text-gray-500 capitalize">
                   {currentQuestion?.difficulty_level === "beginner"
                     ? "Principiante"
-                    : currentQuestion?.difficulty_level === "intermediate"
-                    ? "Intermedio"
-                    : "Avanzado"}
+                    : "Intermedio"}
                 </span>
               </div>
               <span className="text-sm text-gray-500">
@@ -430,7 +411,7 @@ export default function PlacementTestPage() {
               onValueChange={handleAnswerSelect}
             >
               <div className="space-y-3">
-                {currentQuestion?.options.map((option, index) => (
+                {(Array.isArray(currentQuestion?.options) ? currentQuestion.options : []).map((option: string, index: number) => (
                   <div
                     key={index}
                     className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"

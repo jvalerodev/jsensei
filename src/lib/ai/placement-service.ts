@@ -1,8 +1,7 @@
 // Placement Test Service - Handles test evaluation and personalized content generation
 import { createClientDatabase } from "@/lib/database";
-import { ContentGeneratorService } from "./content-generator-service";
 import { type PlacementTestData } from "./schemas";
-import { randomUUID } from "node:crypto";
+import { randomUUID } from "crypto";
 
 export interface PlacementResult {
   skillLevel: "beginner" | "intermediate";
@@ -76,7 +75,7 @@ export class PlacementService {
     // Get questions with their details using the model
     const db = this.getDb();
     const questionIds = responses.map((r) => r.questionId);
-    const questions = await db.placementQuestions.findByIds(questionIds);
+    const questions = await db.placementTests.findByIds(questionIds);
 
     if (!questions || questions.length === 0)
       throw new Error("Failed to load questions");

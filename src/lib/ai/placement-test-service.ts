@@ -10,13 +10,11 @@ import {
  * Servicio simplificado para generar contenido personalizado
  * Se enfoca únicamente en análisis de pruebas de nivelación y generación de planes de aprendizaje concisos
  */
-export class ContentGeneratorService {
+export class PlacementTestService {
   /**
    * Genera análisis y plan de aprendizaje conciso basado en los resultados de la prueba de nivelación
    */
-  static async generatePersonalizedContent(
-    placementData: PlacementTestData
-  ): Promise<{
+  static async generateAnalysis(placementData: PlacementTestData): Promise<{
     analysis: PlacementAnalysis;
     learningPath: LearningPath;
   }> {

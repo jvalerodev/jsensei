@@ -1,7 +1,9 @@
-// Database types and interfaces for JSensei
-export type SkillLevel = 'beginner' | 'intermediate' | 'advanced';
-export type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced';
-export type ExerciseType = 'multiple-choice' | 'code-completion' | 'debugging' | 'coding';
+// Database types and interfaces for JSensei v2.1
+export type SkillLevel = 'beginner' | 'intermediate';
+export type DifficultyLevel = 'beginner' | 'intermediate';
+export type ContentType = 'lesson' | 'exercise' | 'quiz' | 'explanation' | 'example';
+export type InteractionType = 'placement_answer' | 'exercise_answer' | 'lesson_completion' | 'quiz_answer';
+export type ProgressStatus = 'not_started' | 'in_progress' | 'completed' | 'mastered';
 
 // User related types
 export interface User {
@@ -13,7 +15,6 @@ export interface User {
   placement_test_score: number;
   current_lesson_id?: string;
   total_points: number;
-  streak_days: number;
   last_activity_date: string;
   created_at: string;
   updated_at: string;
@@ -38,26 +39,27 @@ export interface UpdateUserData {
 }
 
 // Placement test related types
-export interface PlacementQuestion {
+export interface PlacementTest {
   id: string;
   question: string;
   options: string[];
   correct_answer: string;
+  explanation?: string;
+  topic: string;
   difficulty_level: DifficultyLevel;
   points: number;
-  explanation: string;
-  topic: string;
+  is_active: boolean;
   created_at: string;
 }
 
-export interface CreatePlacementQuestionData {
+export interface CreatePlacementTestData {
   question: string;
   options: string[];
   correct_answer: string;
-  difficulty_level: DifficultyLevel;
-  points: number;
-  explanation: string;
+  explanation?: string;
   topic: string;
+  difficulty_level: DifficultyLevel;
+  points?: number;
 }
 
 export interface PlacementResponse {
@@ -78,207 +80,176 @@ export interface CreatePlacementResponseData {
   response_time?: number;
 }
 
-// Learning content related types
-export interface Lesson {
+// Content related types (unified)
+export interface Content {
   id: string;
+  user_id?: string;
+  learning_path_id?: string;
+  topic_id?: string;
   title: string;
-  description: string;
+  description?: string;
+  content_type: ContentType;
+  skill_level: SkillLevel;
   content: any; // JSON content
-  difficulty_level: DifficultyLevel;
-  order_index: number;
+  difficulty_adjustment: number;
   estimated_duration: number;
+  order_index: number;
+  is_generated_by_ai: boolean;
+  is_active: boolean;
+  target_weak_areas: string[];
+  target_strong_areas: string[];
   created_at: string;
   updated_at: string;
 }
 
-export interface CreateLessonData {
+export interface CreateContentData {
+  user_id?: string;
+  learning_path_id?: string;
+  topic_id?: string;
   title: string;
-  description: string;
+  description?: string;
+  content_type: ContentType;
+  skill_level: SkillLevel;
   content: any;
-  difficulty_level: DifficultyLevel;
-  order_index: number;
-  estimated_duration: number;
+  difficulty_adjustment?: number;
+  estimated_duration?: number;
+  order_index?: number;
+  is_generated_by_ai?: boolean;
+  target_weak_areas?: string[];
+  target_strong_areas?: string[];
 }
 
-export interface UpdateLessonData {
+export interface UpdateContentData {
   title?: string;
   description?: string;
+  content_type?: ContentType;
   content?: any;
-  difficulty_level?: DifficultyLevel;
-  order_index?: number;
+  difficulty_adjustment?: number;
   estimated_duration?: number;
+  order_index?: number;
+  is_active?: boolean;
 }
 
 // Progress tracking types
 export interface UserProgress {
   id: string;
   user_id: string;
-  lesson_id: string;
-  status: 'not_started' | 'in_progress' | 'completed';
+  learning_path_id: string;
+  content_id?: string;
+  topic: string;
+  status: ProgressStatus;
   score: number;
   attempts: number;
   time_spent: number;
+  current_difficulty: number;
+  recent_scores: number[];
+  struggling_areas: string[];
+  mastered_concepts: string[];
+  started_at?: string;
   completed_at?: string;
+  last_interaction: string;
   created_at: string;
   updated_at: string;
 }
 
 export interface CreateUserProgressData {
   user_id: string;
-  lesson_id: string;
-  status?: 'not_started' | 'in_progress' | 'completed';
+  learning_path_id: string;
+  content_id?: string;
+  topic: string;
+  status?: ProgressStatus;
   score?: number;
   attempts?: number;
   time_spent?: number;
 }
 
 export interface UpdateUserProgressData {
-  status?: 'not_started' | 'in_progress' | 'completed';
+  status?: ProgressStatus;
   score?: number;
   attempts?: number;
   time_spent?: number;
+  current_difficulty?: number;
+  recent_scores?: number[];
+  struggling_areas?: string[];
+  mastered_concepts?: string[];
+  started_at?: string;
   completed_at?: string;
+  last_interaction?: string;
 }
 
-// AI generated content types
-export interface GeneratedContent {
+// User interactions (unified) types
+export interface UserInteraction {
   id: string;
   user_id: string;
-  topic: string;
-  skill_level: SkillLevel;
-  content: any; // JSON content
-  weak_areas: string[];
-  strong_areas: string[];
-  content_type: 'lesson' | 'exercise' | 'explanation' | 'adaptive';
-  is_used: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface CreateGeneratedContentData {
-  user_id: string;
-  topic: string;
-  skill_level: SkillLevel;
-  content: any;
-  weak_areas?: string[];
-  strong_areas?: string[];
-  content_type?: 'lesson' | 'exercise' | 'explanation' | 'adaptive';
-}
-
-export interface GeneratedExercise {
-  id: string;
-  user_id: string;
-  topic: string;
-  skill_level: SkillLevel;
-  weak_areas: string[];
-  exercises: any; // JSON exercises
-  is_completed: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface CreateGeneratedExerciseData {
-  user_id: string;
-  topic: string;
-  skill_level: SkillLevel;
-  weak_areas?: string[];
-  exercises: any;
-}
-
-// Exercise evaluation types
-export interface ExerciseEvaluation {
-  id: string;
-  user_id: string;
-  exercise_id: string;
-  user_answer: string;
-  is_correct: boolean;
-  score: number;
-  feedback?: string;
-  suggestions: string[];
-  detailed_explanation?: string;
-  created_at: string;
-}
-
-export interface CreateExerciseEvaluationData {
-  user_id: string;
-  exercise_id: string;
-  user_answer: string;
-  is_correct: boolean;
+  content_id?: string;
+  placement_test_id?: string;
+  interaction_type: InteractionType;
+  user_answer?: string;
+  correct_answer?: string;
+  is_correct?: boolean;
   score?: number;
-  feedback?: string;
-  suggestions?: string[];
-  detailed_explanation?: string;
-}
-
-export interface UserResponse {
-  id: string;
-  user_id: string;
-  exercise_id: string;
-  user_answer: string;
-  is_correct: boolean;
-  feedback?: string;
-  score: number;
-  suggestions: string[];
-  detailed_explanation?: string;
   response_time?: number;
+  ai_feedback?: string;
+  ai_suggestions: string[];
+  ai_explanation?: string;
   created_at: string;
 }
 
-export interface CreateUserResponseData {
+export interface CreateUserInteractionData {
   user_id: string;
-  exercise_id: string;
-  user_answer: string;
-  is_correct: boolean;
+  content_id?: string;
+  placement_test_id?: string;
+  interaction_type: InteractionType;
+  user_answer?: string;
+  correct_answer?: string;
+  is_correct?: boolean;
   score?: number;
-  feedback?: string;
-  suggestions?: string[];
-  detailed_explanation?: string;
   response_time?: number;
+  ai_feedback?: string;
+  ai_suggestions?: string[];
+  ai_explanation?: string;
 }
 
 // Learning path types
 export interface LearningPath {
   id: string;
   user_id: string;
-  path_id: string;
   title: string;
   description?: string;
-  topics: any; // JSON topics
+  skill_level: SkillLevel;
+  weak_areas: string[];
+  strong_areas: string[];
+  recommended_topics: string[];
+  topics: any; // JSON topics with topic_id references
   estimated_duration: number;
   is_active: boolean;
+  progress_percentage: number;
   created_at: string;
   updated_at: string;
 }
 
 export interface CreateLearningPathData {
   user_id: string;
-  path_id: string;
   title: string;
   description?: string;
-  topics: any;
-  estimated_duration?: number;
-}
-
-// Placement analysis types
-export interface PlacementAnalysis {
-  id: string;
-  user_id: string;
-  skill_level: SkillLevel;
-  weak_areas: string[];
-  strong_areas: string[];
-  recommended_topics: string[];
-  personalized_advice?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface CreatePlacementAnalysisData {
-  user_id: string;
   skill_level: SkillLevel;
   weak_areas?: string[];
   strong_areas?: string[];
   recommended_topics?: string[];
-  personalized_advice?: string;
+  topics: any;
+  estimated_duration?: number;
+}
+
+// Topic content helper types
+export interface TopicContent {
+  topic_id: string;
+  topic_name: string;
+  content_items: Content[];
+}
+
+export interface LearningPathWithContent {
+  learning_path: LearningPath;
+  topics: TopicContent[];
 }
 
 // Common database operation types

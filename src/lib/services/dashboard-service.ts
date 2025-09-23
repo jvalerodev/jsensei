@@ -46,7 +46,8 @@ export async function getUserProgressData(db: any, userId: string) {
  */
 export async function getUserRecentActivity(db: any, userId: string) {
   try {
-    const recentActivityResult = await db.placementResponses.findAll(
+    // Get recent user interactions (including placement test answers)
+    const recentActivityResult = await db.userInteractions.findAll(
       { user_id: userId }, 
       { limit: 5, orderBy: 'created_at', orderDirection: 'desc' }
     );

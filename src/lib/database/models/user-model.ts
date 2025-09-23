@@ -67,7 +67,7 @@ export class UserModel extends BaseModel<User, CreateUserData, UpdateUserData> {
   /**
    * Complete placement test for user
    */
-  async completeePlacementTest(
+  async completePlacementTest(
     userId: string, 
     score: number, 
     skillLevel: SkillLevel

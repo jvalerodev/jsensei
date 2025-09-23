@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
-import { getDatabase } from "@/lib/database/server";
-import { ContentGeneratorService } from "@/lib/ai/content-generator-service";
+import { getDatabase, LearningPath } from "@/lib/database/server";
+import { PlacementTestService } from "@/lib/ai/placement-test-service";
 import { z } from "zod";
 
 // Esquema de validación para el request
@@ -19,7 +19,7 @@ const PersonalizedContentRequestSchema = z.object({
       id: z.string(),
       question: z.string(),
       correct_answer: z.string(),
-      difficulty_level: z.string(),
+      difficulty_level: z.enum(["beginner", "intermediate"]),
       topic: z.string(),
       points: z.number()
     })
@@ -64,45 +64,45 @@ export async function POST(request: NextRequest) {
       completedAt: new Date().toISOString()
     };
 
-    // Generar análisis y plan de aprendizaje conciso basado en la prueba de nivelación
-    const result = await ContentGeneratorService.generatePersonalizedContent(
-      placementData
-    );
+    // Generar análisis y plan de aprendizaje con IA basado en la prueba de nivelación
+    const result = await PlacementTestService.generateAnalysis(placementData);
 
-    // Guardar el análisis y plan de aprendizaje en la base de datos usando los modelos
+    // Guardar el plan de aprendizaje con análisis integrado usando la nueva estructura
     const db = await getDatabase();
+    let createdLearningPath: LearningPath;
 
     try {
-      await db.placementAnalysis.create({
+      // Crear learning path con análisis integrado
+      createdLearningPath = await db.learningPaths.create({
         user_id: user.id,
+        title: result.learningPath.title,
+        description: result.learningPath.description,
         skill_level: result.analysis.skillLevel,
         weak_areas: result.analysis.weakAreas,
         strong_areas: result.analysis.strongAreas,
         recommended_topics: result.analysis.recommendedTopics,
-        personalized_advice: result.analysis.personalizedAdvice
-      });
-    } catch (analysisError) {
-      console.error("Error saving placement analysis:", analysisError);
-    }
-
-    // Guardar el plan de aprendizaje conciso usando el modelo
-    try {
-      await db.learningPaths.create({
-        user_id: user.id,
-        path_id: result.learningPath.id!,
-        title: result.learningPath.title,
-        description: result.learningPath.description,
-        topics: result.learningPath.topics,
+        topics: result.learningPath.topics, // La IA retorna la estructura correcta
         estimated_duration: result.learningPath.estimatedDuration
       });
-    } catch (pathError) {
-      console.error("Error saving learning path:", pathError);
+
+      // Marcar el placement test como completado
+      await db.users.update(user.id, {
+        placement_test_completed: true,
+        placement_test_score: validatedData.totalScore || 0,
+        skill_level: result.analysis.skillLevel
+      });
+    } catch (dbError) {
+      console.error("Error saving learning path and user data:", dbError);
+      throw dbError;
     }
 
     return NextResponse.json({
       success: true,
       analysis: result.analysis,
-      learningPath: result.learningPath
+      learningPath: {
+        ...result.learningPath,
+        id: createdLearningPath.id
+      }
     });
   } catch (error) {
     console.error("Error generating personalized content:", error);

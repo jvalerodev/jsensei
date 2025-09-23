@@ -1,47 +1,78 @@
-// Content model - handles AI generated content and exercises
+// Content model v2.1 - handles unified content (lessons, exercises, quizzes, etc.)
 import { SupabaseClient } from '@supabase/supabase-js';
 import { BaseModel } from '../base-model';
 import { 
-  GeneratedContent, 
-  CreateGeneratedContentData, 
-  GeneratedExercise,
-  CreateGeneratedExerciseData,
-  ExerciseEvaluation,
-  CreateExerciseEvaluationData,
-  UserResponse,
-  CreateUserResponseData,
+  Content, 
+  CreateContentData, 
+  UpdateContentData,
+  ContentType,
   SkillLevel,
   QueryOptions,
   PaginatedResult 
 } from '../types';
 
-export class GeneratedContentModel extends BaseModel<GeneratedContent, CreateGeneratedContentData, Partial<CreateGeneratedContentData>> {
+export class ContentModel extends BaseModel<Content, CreateContentData, UpdateContentData> {
   constructor(supabase: SupabaseClient) {
-    super(supabase, 'generated_content');
+    super(supabase, 'contents');
   }
 
   /**
-   * Create generated content with validation
+   * Create content with validation
    */
-  async create(contentData: CreateGeneratedContentData): Promise<GeneratedContent> {
-    this.validateRequired(contentData, ['user_id', 'topic', 'skill_level', 'content', 'content_type']);
+  async create(contentData: CreateContentData): Promise<Content> {
+    this.validateRequired(contentData, ['title', 'content_type', 'skill_level', 'content']);
 
     const sanitizedData = this.sanitizeData({
       ...contentData,
-      content: JSON.stringify(contentData.content),
-      created_at: new Date().toISOString()
+      content: typeof contentData.content === 'object' 
+        ? JSON.stringify(contentData.content) 
+        : contentData.content,
+      difficulty_adjustment: contentData.difficulty_adjustment || 1.0,
+      estimated_duration: contentData.estimated_duration || 15,
+      order_index: contentData.order_index || 0,
+      target_weak_areas: contentData.target_weak_areas || [],
+      target_strong_areas: contentData.target_strong_areas || [],
+      is_generated_by_ai: false,
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     });
 
     return super.create(sanitizedData);
   }
 
   /**
-   * Get user's generated content
+   * Get content by topic_id
+   */
+  async getContentByTopicId(
+    topicId: string,
+    options: QueryOptions = {}
+  ): Promise<PaginatedResult<Content>> {
+    try {
+      const { data, error } = await this.supabase
+        .rpc('get_contents_by_topic_id', { p_topic_id: topicId });
+
+      if (error) {
+        throw this.handleError(error);
+      }
+
+      return {
+        data: (data || []).map(this.parseContent),
+        count: data?.length || 0,
+        hasMore: false
+      };
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Get user's content
    */
   async getUserContent(
     userId: string, 
     options: QueryOptions = {}
-  ): Promise<PaginatedResult<GeneratedContent>> {
+  ): Promise<PaginatedResult<Content>> {
     const result = await this.findAll({ user_id: userId }, {
       ...options,
       orderBy: options.orderBy || 'created_at',
@@ -55,16 +86,36 @@ export class GeneratedContentModel extends BaseModel<GeneratedContent, CreateGen
   }
 
   /**
-   * Get content by topic and skill level
+   * Get content by learning path
    */
-  async getContentByTopicAndLevel(
-    topic: string, 
+  async getContentByLearningPath(
+    learningPathId: string,
+    options: QueryOptions = {}
+  ): Promise<PaginatedResult<Content>> {
+    const result = await this.findAll({ learning_path_id: learningPathId }, {
+      ...options,
+      orderBy: options.orderBy || 'order_index',
+      orderDirection: options.orderDirection || 'asc'
+    });
+
+    return {
+      ...result,
+      data: result.data.map(this.parseContent)
+    };
+  }
+
+  /**
+   * Get content by type and skill level
+   */
+  async getContentByTypeAndLevel(
+    contentType: ContentType,
     skillLevel: SkillLevel,
     options: QueryOptions = {}
-  ): Promise<PaginatedResult<GeneratedContent>> {
+  ): Promise<PaginatedResult<Content>> {
     const result = await this.findAll({ 
-      topic, 
-      skill_level: skillLevel 
+      content_type: contentType,
+      skill_level: skillLevel,
+      is_active: true
     }, options);
 
     return {
@@ -74,19 +125,21 @@ export class GeneratedContentModel extends BaseModel<GeneratedContent, CreateGen
   }
 
   /**
-   * Get content by type
+   * Get AI generated content for user
    */
-  async getContentByType(
-    contentType: string,
-    userId?: string,
+  async getAIGeneratedContent(
+    userId: string,
     options: QueryOptions = {}
-  ): Promise<PaginatedResult<GeneratedContent>> {
-    const filters: any = { content_type: contentType };
-    if (userId) {
-      filters.user_id = userId;
-    }
-
-    const result = await this.findAll(filters, options);
+  ): Promise<PaginatedResult<Content>> {
+    const result = await this.findAll({ 
+      user_id: userId,
+      is_generated_by_ai: true,
+      is_active: true
+    }, {
+      ...options,
+      orderBy: options.orderBy || 'created_at',
+      orderDirection: options.orderDirection || 'desc'
+    });
 
     return {
       ...result,
@@ -95,307 +148,169 @@ export class GeneratedContentModel extends BaseModel<GeneratedContent, CreateGen
   }
 
   /**
+   * Generate content from learning path using database function
+   */
+  async generateContentFromLearningPath(
+    learningPathId: string,
+    userId?: string
+  ): Promise<any> {
+    try {
+      const { data, error } = await this.supabase
+        .rpc('generate_contents_from_learning_path', {
+          p_learning_path_id: learningPathId,
+          p_user_id: userId || null
+        });
+
+      if (error) {
+        throw this.handleError(error);
+      }
+
+      return data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Search content by title or description
+   */
+  async searchContent(
+    searchTerm: string,
+    filters: {
+      contentType?: ContentType;
+      skillLevel?: SkillLevel;
+      userId?: string;
+    } = {},
+    options: QueryOptions = {}
+  ): Promise<PaginatedResult<Content>> {
+    try {
+      let query = this.supabase
+        .from(this.tableName)
+        .select('*', { count: 'exact' })
+        .or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`)
+        .eq('is_active', true);
+
+      // Apply filters
+      if (filters.contentType) {
+        query = query.eq('content_type', filters.contentType);
+      }
+      if (filters.skillLevel) {
+        query = query.eq('skill_level', filters.skillLevel);
+      }
+      if (filters.userId) {
+        query = query.eq('user_id', filters.userId);
+      }
+
+      // Apply ordering
+      if (options.orderBy) {
+        query = query.order(options.orderBy, { 
+          ascending: options.orderDirection !== 'desc' 
+        });
+      } else {
+        query = query.order('created_at', { ascending: false });
+      }
+
+      // Apply pagination
+      if (options.limit) {
+        query = query.limit(options.limit);
+      }
+      if (options.offset) {
+        query = query.range(options.offset, options.offset + (options.limit || 10) - 1);
+      }
+
+      const { data, error, count } = await query;
+
+      if (error) {
+        throw this.handleError(error);
+      }
+
+      const totalCount = count || 0;
+      const hasMore = options.limit ? 
+        (options.offset || 0) + (options.limit || 0) < totalCount : 
+        false;
+
+      return {
+        data: (data || []).map(this.parseContent),
+        count: totalCount,
+        hasMore
+      };
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
    * Parse content data
    */
-  private parseContent(contentData: any): GeneratedContent {
+  private parseContent(contentData: any): Content {
     return {
       ...contentData,
       content: typeof contentData.content === 'string' 
         ? JSON.parse(contentData.content) 
-        : contentData.content
+        : contentData.content,
+      target_weak_areas: contentData.target_weak_areas || [],
+      target_strong_areas: contentData.target_strong_areas || []
     };
   }
 
   /**
    * Override findById to parse content
    */
-  async findById(id: string): Promise<GeneratedContent | null> {
+  async findById(id: string): Promise<Content | null> {
     const content = await super.findById(id);
     return content ? this.parseContent(content) : null;
   }
-}
-
-export class GeneratedExerciseModel extends BaseModel<GeneratedExercise, CreateGeneratedExerciseData, Partial<CreateGeneratedExerciseData>> {
-  constructor(supabase: SupabaseClient) {
-    super(supabase, 'generated_exercises');
-  }
 
   /**
-   * Create generated exercises with validation
+   * Update content with parsing
    */
-  async create(exerciseData: CreateGeneratedExerciseData): Promise<GeneratedExercise> {
-    this.validateRequired(exerciseData, ['user_id', 'topic', 'skill_level', 'exercises']);
-
+  async update(id: string, updateData: UpdateContentData): Promise<Content | null> {
     const sanitizedData = this.sanitizeData({
-      ...exerciseData,
-      exercises: JSON.stringify(exerciseData.exercises),
-      created_at: new Date().toISOString()
+      ...updateData,
+      content: updateData.content && typeof updateData.content === 'object'
+        ? JSON.stringify(updateData.content)
+        : updateData.content,
+      updated_at: new Date().toISOString()
     });
 
-    return super.create(sanitizedData);
+    const updated = await super.update(id, sanitizedData);
+    return updated ? this.parseContent(updated) : null;
   }
 
   /**
-   * Get user's generated exercises
+   * Get content statistics
    */
-  async getUserExercises(
-    userId: string, 
-    options: QueryOptions = {}
-  ): Promise<PaginatedResult<GeneratedExercise>> {
-    const result = await this.findAll({ user_id: userId }, {
-      ...options,
-      orderBy: options.orderBy || 'created_at',
-      orderDirection: options.orderDirection || 'desc'
-    });
-
-    return {
-      ...result,
-      data: result.data.map(this.parseExercise)
-    };
-  }
-
-  /**
-   * Get exercises by topic and skill level
-   */
-  async getExercisesByTopicAndLevel(
-    topic: string, 
-    skillLevel: SkillLevel,
-    options: QueryOptions = {}
-  ): Promise<PaginatedResult<GeneratedExercise>> {
-    const result = await this.findAll({ 
-      topic, 
-      skill_level: skillLevel 
-    }, options);
-
-    return {
-      ...result,
-      data: result.data.map(this.parseExercise)
-    };
-  }
-
-  /**
-   * Parse exercise data
-   */
-  private parseExercise(exerciseData: any): GeneratedExercise {
-    return {
-      ...exerciseData,
-      exercises: typeof exerciseData.exercises === 'string' 
-        ? JSON.parse(exerciseData.exercises) 
-        : exerciseData.exercises
-    };
-  }
-
-  /**
-   * Override findById to parse exercises
-   */
-  async findById(id: string): Promise<GeneratedExercise | null> {
-    const exercise = await super.findById(id);
-    return exercise ? this.parseExercise(exercise) : null;
-  }
-}
-
-export class ExerciseEvaluationModel extends BaseModel<ExerciseEvaluation, CreateExerciseEvaluationData, Partial<CreateExerciseEvaluationData>> {
-  constructor(supabase: SupabaseClient) {
-    super(supabase, 'exercise_evaluations');
-  }
-
-  /**
-   * Create exercise evaluation with validation
-   */
-  async create(evaluationData: CreateExerciseEvaluationData): Promise<ExerciseEvaluation> {
-    this.validateRequired(evaluationData, [
-      'user_id', 
-      'exercise_id', 
-      'user_answer', 
-      'is_correct', 
-      'feedback', 
-      'score'
-    ]);
-
-    const sanitizedData = this.sanitizeData({
-      ...evaluationData,
-      created_at: new Date().toISOString()
-    });
-
-    return super.create(sanitizedData);
-  }
-
-  /**
-   * Get user's exercise evaluations
-   */
-  async getUserEvaluations(
-    userId: string, 
-    options: QueryOptions = {}
-  ): Promise<PaginatedResult<ExerciseEvaluation>> {
-    return this.findAll({ user_id: userId }, {
-      ...options,
-      orderBy: options.orderBy || 'created_at',
-      orderDirection: options.orderDirection || 'desc'
-    });
-  }
-
-  /**
-   * Get evaluations for a specific exercise
-   */
-  async getExerciseEvaluations(
-    exerciseId: string, 
-    options: QueryOptions = {}
-  ): Promise<PaginatedResult<ExerciseEvaluation>> {
-    return this.findAll({ exercise_id: exerciseId }, options);
-  }
-
-  /**
-   * Get user's performance statistics
-   */
-  async getUserPerformanceStats(userId: string): Promise<{
-    totalAttempts: number;
-    correctAnswers: number;
-    averageScore: number;
-    successRate: number;
+  async getContentStats(): Promise<{
+    totalContent: number;
+    contentByType: Record<ContentType, number>;
+    contentBySkillLevel: Record<SkillLevel, number>;
+    aiGeneratedCount: number;
   }> {
     try {
-      const { data } = await this.getUserEvaluations(userId);
-
-      if (!data || data.length === 0) {
-        return {
-          totalAttempts: 0,
-          correctAnswers: 0,
-          averageScore: 0,
-          successRate: 0
-        };
-      }
-
-      const totalAttempts = data.length;
-      const correctAnswers = data.filter(e => e.is_correct).length;
-      const averageScore = data.reduce((sum, e) => sum + e.score, 0) / totalAttempts;
-      const successRate = (correctAnswers / totalAttempts) * 100;
-
-      return {
-        totalAttempts,
-        correctAnswers,
-        averageScore: Math.round(averageScore * 100) / 100,
-        successRate: Math.round(successRate * 100) / 100
-      };
-    } catch (error) {
-      throw this.handleError(error);
-    }
-  }
-}
-
-export class UserResponseModel extends BaseModel<UserResponse, CreateUserResponseData, Partial<CreateUserResponseData>> {
-  constructor(supabase: SupabaseClient) {
-    super(supabase, 'user_responses');
-  }
-
-  /**
-   * Create user response with validation
-   */
-  async create(responseData: CreateUserResponseData): Promise<UserResponse> {
-    this.validateRequired(responseData, [
-      'user_id', 
-      'exercise_id', 
-      'user_answer', 
-      'is_correct', 
-      'score'
-    ]);
-
-    const sanitizedData = this.sanitizeData({
-      ...responseData,
-      created_at: new Date().toISOString()
-    });
-
-    return super.create(sanitizedData);
-  }
-
-  /**
-   * Get user's responses
-   */
-  async getUserResponses(
-    userId: string, 
-    options: QueryOptions = {}
-  ): Promise<PaginatedResult<UserResponse>> {
-    return this.findAll({ user_id: userId }, {
-      ...options,
-      orderBy: options.orderBy || 'created_at',
-      orderDirection: options.orderDirection || 'desc'
-    });
-  }
-
-  /**
-   * Get responses for a specific exercise
-   */
-  async getExerciseResponses(
-    exerciseId: string, 
-    options: QueryOptions = {}
-  ): Promise<PaginatedResult<UserResponse>> {
-    return this.findAll({ exercise_id: exerciseId }, options);
-  }
-
-  /**
-   * Get user's latest response for an exercise
-   */
-  async getLatestUserResponse(
-    userId: string, 
-    exerciseId: string
-  ): Promise<UserResponse | null> {
-    try {
-      const { data, error } = await this.supabase
+      const { data } = await this.supabase
         .from(this.tableName)
-        .select('*')
-        .eq('user_id', userId)
-        .eq('exercise_id', exerciseId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+        .select('content_type, skill_level, is_generated_by_ai')
+        .eq('is_active', true);
 
-      if (error) {
-        if (error.code === 'PGRST116') {
-          return null;
-        }
-        throw this.handleError(error);
-      }
+      const totalContent = data?.length || 0;
+      
+      const contentByType = (data || []).reduce((acc, item) => {
+        acc[item.content_type as ContentType] = (acc[item.content_type as ContentType] || 0) + 1;
+        return acc;
+      }, {} as Record<ContentType, number>);
 
-      return data as UserResponse;
-    } catch (error) {
-      throw this.handleError(error);
-    }
-  }
+      const contentBySkillLevel = (data || []).reduce((acc, item) => {
+        acc[item.skill_level as SkillLevel] = (acc[item.skill_level as SkillLevel] || 0) + 1;
+        return acc;
+      }, {} as Record<SkillLevel, number>);
 
-  /**
-   * Get user's response statistics
-   */
-  async getUserResponseStats(userId: string): Promise<{
-    totalResponses: number;
-    correctResponses: number;
-    averageScore: number;
-    successRate: number;
-    recentActivity: UserResponse[];
-  }> {
-    try {
-      const { data } = await this.getUserResponses(userId);
-
-      if (!data || data.length === 0) {
-        return {
-          totalResponses: 0,
-          correctResponses: 0,
-          averageScore: 0,
-          successRate: 0,
-          recentActivity: []
-        };
-      }
-
-      const totalResponses = data.length;
-      const correctResponses = data.filter(r => r.is_correct).length;
-      const averageScore = data.reduce((sum, r) => sum + r.score, 0) / totalResponses;
-      const successRate = (correctResponses / totalResponses) * 100;
-      const recentActivity = data.slice(0, 5);
+      const aiGeneratedCount = (data || []).filter(item => item.is_generated_by_ai).length;
 
       return {
-        totalResponses,
-        correctResponses,
-        averageScore: Math.round(averageScore * 100) / 100,
-        successRate: Math.round(successRate * 100) / 100,
-        recentActivity
+        totalContent,
+        contentByType,
+        contentBySkillLevel,
+        aiGeneratedCount
       };
     } catch (error) {
       throw this.handleError(error);

@@ -1,43 +1,41 @@
 // Placement test model - handles placement questions and responses
-import { SupabaseClient } from '@supabase/supabase-js';
-import { BaseModel } from '../base-model';
-import { 
-  PlacementQuestion, 
-  CreatePlacementQuestionData, 
-  PlacementResponse,
-  CreatePlacementResponseData,
+import { SupabaseClient } from "@supabase/supabase-js";
+import { BaseModel } from "../base-model";
+import {
+  PlacementTest,
+  CreatePlacementTestData,
   DifficultyLevel,
   QueryOptions,
-  PaginatedResult 
-} from '../types';
+  PaginatedResult
+} from "../types";
 
-export class PlacementQuestionModel extends BaseModel<
-  PlacementQuestion, 
-  CreatePlacementQuestionData, 
-  Partial<CreatePlacementQuestionData>
+export class PlacementTestModel extends BaseModel<
+  PlacementTest,
+  CreatePlacementTestData,
+  Partial<CreatePlacementTestData>
 > {
   constructor(supabase: SupabaseClient) {
-    super(supabase, 'placement_questions');
+    super(supabase, "placement_tests");
   }
 
   /**
    * Create a placement question with validation
    */
-  async create(questionData: CreatePlacementQuestionData): Promise<PlacementQuestion> {
+  async create(questionData: CreatePlacementTestData): Promise<PlacementTest> {
     this.validateRequired(questionData, [
-      'question', 
-      'options', 
-      'correct_answer', 
-      'difficulty_level', 
-      'points', 
-      'explanation'
+      "question",
+      "options",
+      "correct_answer",
+      "difficulty_level",
+      "topic"
     ]);
 
     this.validateQuestionData(questionData);
 
     const sanitizedData = this.sanitizeData({
       ...questionData,
-      options: JSON.stringify(questionData.options),
+      points: questionData.points || 1,
+      is_active: true,
       created_at: new Date().toISOString()
     });
 
@@ -47,11 +45,37 @@ export class PlacementQuestionModel extends BaseModel<
   /**
    * Get questions by difficulty level
    */
-  async findByDifficulty(
-    difficulty: DifficultyLevel, 
+  async getQuestionsByDifficulty(
+    difficultyLevel: DifficultyLevel,
     options: QueryOptions = {}
-  ): Promise<PaginatedResult<PlacementQuestion>> {
-    return this.findAll({ difficulty_level: difficulty }, options);
+  ): Promise<PaginatedResult<PlacementTest>> {
+    return this.findAll(
+      {
+        difficulty_level: difficultyLevel,
+        is_active: true
+      },
+      {
+        ...options,
+        orderBy: options.orderBy || "created_at",
+        orderDirection: options.orderDirection || "asc"
+      }
+    );
+  }
+
+  /**
+   * Get questions by topic
+   */
+  async getQuestionsByTopic(
+    topic: string,
+    options: QueryOptions = {}
+  ): Promise<PaginatedResult<PlacementTest>> {
+    return this.findAll(
+      {
+        topic,
+        is_active: true
+      },
+      options
+    );
   }
 
   /**
@@ -59,86 +83,32 @@ export class PlacementQuestionModel extends BaseModel<
    */
   async getRandomQuestions(
     count: number = 20,
-    difficultyDistribution?: {
-      beginner: number;
-      intermediate: number;
-      advanced: number;
-    }
-  ): Promise<PlacementQuestion[]> {
+    difficultyLevel?: DifficultyLevel
+  ): Promise<PlacementTest[]> {
     try {
-      const questions: PlacementQuestion[] = [];
-      
-      if (difficultyDistribution) {
-        // Get questions with specific distribution
-        for (const [difficulty, questionCount] of Object.entries(difficultyDistribution)) {
-          if (questionCount > 0) {
-            const { data } = await this.supabase
-              .from(this.tableName)
-              .select('*')
-              .eq('difficulty_level', difficulty)
-              .order('created_at', { ascending: false })
-              .limit(questionCount * 2); // Get more to randomize
+      let query = this.supabase
+        .from(this.tableName)
+        .select("*")
+        .eq("is_active", true);
 
-            if (data && data.length > 0) {
-              // Randomize and take required count
-              const shuffled = data.sort(() => 0.5 - Math.random());
-              questions.push(...shuffled.slice(0, questionCount).map(this.parseQuestion));
-            }
-          }
-        }
-      } else {
-        // Get random questions across all difficulties
-        const { data } = await this.supabase
-          .from(this.tableName)
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(count * 2); // Get more to randomize
-
-        if (data && data.length > 0) {
-          const shuffled = data.sort(() => 0.5 - Math.random());
-          questions.push(...shuffled.slice(0, count).map(this.parseQuestion));
-        }
+      if (difficultyLevel) {
+        query = query.eq("difficulty_level", difficultyLevel);
       }
 
-      return questions;
-    } catch (error) {
-      throw this.handleError(error);
-    }
-  }
-
-  /**
-   * Get questions by IDs
-   */
-  async findByIds(ids: string[]): Promise<PlacementQuestion[]> {
-    try {
-      const { data, error } = await this.supabase
-        .from(this.tableName)
-        .select('*')
-        .in('id', ids);
+      // Get random questions using PostgreSQL's TABLESAMPLE or ORDER BY RANDOM()
+      const { data, error } = await query
+        .order("created_at", { ascending: false }) // Fallback ordering
+        .limit(count * 2); // Get more than needed for randomization
 
       if (error) {
         throw this.handleError(error);
       }
 
-      return (data || []).map(this.parseQuestion);
-    } catch (error) {
-      throw this.handleError(error);
-    }
-  }
-
-  /**
-   * Clear all questions (for seeding)
-   */
-  async clearAll(): Promise<void> {
-    try {
-      const { error } = await this.supabase
-        .from(this.tableName)
-        .delete()
-        .neq('id', 'never-match'); // Delete all rows
-
-      if (error) {
-        throw this.handleError(error);
-      }
+      // Shuffle and return requested count
+      const shuffled = (data || []).sort(() => Math.random() - 0.5);
+      return shuffled
+        .slice(0, count)
+        .map(this.parseQuestion) as PlacementTest[];
     } catch (error) {
       throw this.handleError(error);
     }
@@ -147,9 +117,13 @@ export class PlacementQuestionModel extends BaseModel<
   /**
    * Bulk insert questions
    */
-  async bulkInsert(questions: CreatePlacementQuestionData[]): Promise<PlacementQuestion[]> {
-    const sanitizedQuestions = questions.map(q => ({
+  async bulkInsert(
+    questions: CreatePlacementTestData[]
+  ): Promise<PlacementTest[]> {
+    const sanitizedQuestions = questions.map((q) => ({
       ...q,
+      points: q.points || 1,
+      is_active: true,
       created_at: new Date().toISOString()
     }));
 
@@ -159,214 +133,72 @@ export class PlacementQuestionModel extends BaseModel<
   /**
    * Parse question data (convert JSON strings back to arrays)
    */
-  private parseQuestion(questionData: any): PlacementQuestion {
+  private parseQuestion = (questionData: any): PlacementTest => {
     return {
       ...questionData,
-      options: typeof questionData.options === 'string' 
-        ? JSON.parse(questionData.options) 
-        : questionData.options
+      options:
+        typeof questionData.options === "string"
+          ? JSON.parse(questionData.options)
+          : questionData.options
     };
-  }
+  };
 
   /**
    * Validate question data
    */
-  private validateQuestionData(questionData: CreatePlacementQuestionData): void {
-    if (!Array.isArray(questionData.options) || questionData.options.length < 2) {
-      throw new Error('Question must have at least 2 options');
+  private validateQuestionData(
+    questionData: Partial<CreatePlacementTestData>
+  ): void {
+    if (
+      questionData.options &&
+      (!Array.isArray(questionData.options) || questionData.options.length < 2)
+    ) {
+      throw new Error("Question must have at least 2 options");
     }
 
-    if (!questionData.options.includes(questionData.correct_answer)) {
-      throw new Error('Correct answer must be one of the provided options');
+    if (
+      questionData.correct_answer &&
+      questionData.options &&
+      !questionData.options.includes(questionData.correct_answer)
+    ) {
+      throw new Error("Correct answer must be one of the provided options");
     }
 
-    if (!['beginner', 'intermediate', 'advanced'].includes(questionData.difficulty_level)) {
-      throw new Error('Invalid difficulty level');
+    if (
+      questionData.difficulty_level &&
+      !["beginner", "intermediate"].includes(questionData.difficulty_level)
+    ) {
+      throw new Error("Invalid difficulty level");
     }
 
-    if (questionData.points <= 0) {
-      throw new Error('Points must be greater than 0');
+    if (questionData.points && questionData.points <= 0) {
+      throw new Error("Points must be greater than 0");
     }
-  }
-}
-
-export class PlacementResponseModel extends BaseModel<
-  PlacementResponse, 
-  CreatePlacementResponseData, 
-  Partial<CreatePlacementResponseData>
-> {
-  constructor(supabase: SupabaseClient) {
-    super(supabase, 'placement_responses');
-  }
-
-  /**
-   * Create a placement response with validation
-   */
-  async create(responseData: CreatePlacementResponseData): Promise<PlacementResponse> {
-    this.validateRequired(responseData, ['user_id', 'question_id', 'selected_answer']);
-
-    const sanitizedData = this.sanitizeData({
-      ...responseData,
-      response_time: responseData.response_time || 0,
-      created_at: new Date().toISOString()
-    });
-
-    return super.create(sanitizedData);
   }
 
   /**
-   * Get user's responses for a specific test session
+   * Override findById to parse question
    */
-  async getUserResponses(
-    userId: string, 
-    options: QueryOptions = {}
-  ): Promise<PaginatedResult<PlacementResponse>> {
-    return this.findAll({ user_id: userId }, {
-      ...options,
-      orderBy: 'created_at',
-      orderDirection: 'desc'
-    });
+  async findById(id: string): Promise<PlacementTest | null> {
+    const question = await super.findById(id);
+    return question ? this.parseQuestion(question) : null;
   }
 
   /**
-   * Get responses with question details
+   * Find multiple questions by IDs
    */
-  async getResponsesWithQuestions(userId: string): Promise<any[]> {
+  async findByIds(ids: string[]): Promise<PlacementTest[]> {
     try {
       const { data, error } = await this.supabase
         .from(this.tableName)
-        .select(`
-          *,
-          placement_questions (
-            question,
-            correct_answer,
-            difficulty_level,
-            points,
-            explanation
-          )
-        `)
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+        .select("*")
+        .in("id", ids);
 
       if (error) {
         throw this.handleError(error);
       }
 
-      return data || [];
-    } catch (error) {
-      throw this.handleError(error);
-    }
-  }
-
-  /**
-   * Get recent responses for activity feed
-   */
-  async getRecentResponses(
-    userId: string, 
-    limit: number = 5
-  ): Promise<any[]> {
-    try {
-      const { data, error } = await this.supabase
-        .from(this.tableName)
-        .select(`
-          *,
-          placement_questions (question)
-        `)
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(limit);
-
-      if (error) {
-        throw this.handleError(error);
-      }
-
-      return data || [];
-    } catch (error) {
-      throw this.handleError(error);
-    }
-  }
-
-  /**
-   * Calculate user's placement test results
-   */
-  async calculateResults(userId: string): Promise<{
-    totalScore: number;
-    maxScore: number;
-    correctAnswers: number;
-    totalQuestions: number;
-    averageResponseTime: number;
-    difficultyBreakdown: Record<DifficultyLevel, { correct: number; total: number }>;
-  }> {
-    try {
-      const responses = await this.getResponsesWithQuestions(userId);
-      
-      let totalScore = 0;
-      let maxScore = 0;
-      let correctAnswers = 0;
-      let totalResponseTime = 0;
-      const difficultyBreakdown: Record<DifficultyLevel, { correct: number; total: number }> = {
-        beginner: { correct: 0, total: 0 },
-        intermediate: { correct: 0, total: 0 },
-        advanced: { correct: 0, total: 0 }
-      };
-
-      responses.forEach(response => {
-        const question = response.placement_questions;
-        if (!question) return;
-
-        const isCorrect = response.selected_answer === question.correct_answer;
-        const difficulty = question.difficulty_level as DifficultyLevel;
-
-        if (isCorrect) {
-          totalScore += question.points;
-          correctAnswers++;
-          difficultyBreakdown[difficulty].correct++;
-        }
-
-        maxScore += question.points;
-        totalResponseTime += response.response_time || 0;
-        difficultyBreakdown[difficulty].total++;
-      });
-
-      return {
-        totalScore,
-        maxScore,
-        correctAnswers,
-        totalQuestions: responses.length,
-        averageResponseTime: responses.length > 0 ? totalResponseTime / responses.length : 0,
-        difficultyBreakdown
-      };
-    } catch (error) {
-      throw this.handleError(error);
-    }
-  }
-
-  /**
-   * Bulk insert responses
-   */
-  async bulkInsertResponses(responses: CreatePlacementResponseData[]): Promise<PlacementResponse[]> {
-    const sanitizedResponses = responses.map(r => ({
-      ...r,
-      response_time: r.response_time || 0,
-      created_at: new Date().toISOString()
-    }));
-
-    return super.createMany(sanitizedResponses);
-  }
-
-  /**
-   * Delete user's responses (for retaking test)
-   */
-  async deleteUserResponses(userId: string): Promise<void> {
-    try {
-      const { error } = await this.supabase
-        .from(this.tableName)
-        .delete()
-        .eq('user_id', userId);
-
-      if (error) {
-        throw this.handleError(error);
-      }
+      return (data || []).map(this.parseQuestion);
     } catch (error) {
       throw this.handleError(error);
     }

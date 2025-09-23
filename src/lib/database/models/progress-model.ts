@@ -18,7 +18,7 @@ export class UserProgressModel extends BaseModel<UserProgress, CreateUserProgres
    * Create user progress with validation
    */
   async create(progressData: CreateUserProgressData): Promise<UserProgress> {
-    this.validateRequired(progressData, ['user_id', 'lesson_id']);
+    this.validateRequired(progressData, ['user_id', 'learning_path_id', 'topic']);
 
     const sanitizedData = this.sanitizeData({
       ...progressData,
@@ -26,6 +26,11 @@ export class UserProgressModel extends BaseModel<UserProgress, CreateUserProgres
       score: progressData.score || 0,
       attempts: progressData.attempts || 0,
       time_spent: progressData.time_spent || 0,
+      current_difficulty: 1.0,
+      recent_scores: [],
+      struggling_areas: [],
+      mastered_concepts: [],
+      last_interaction: new Date().toISOString(),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     });
@@ -34,29 +39,33 @@ export class UserProgressModel extends BaseModel<UserProgress, CreateUserProgres
   }
 
   /**
-   * Update progress for a user and lesson
+   * Update progress for a user and learning path topic
    */
   async updateProgress(
     userId: string, 
-    lessonId: string, 
+    learningPathId: string,
+    topic: string,
     updateData: UpdateUserProgressData
   ): Promise<UserProgress | null> {
     try {
-      // First try to find existing progress
-      const existing = await this.findUserLessonProgress(userId, lessonId);
+      // Try to find existing progress record
+      const existingProgress = await this.findByUserAndTopic(userId, learningPathId, topic);
       
-      if (existing) {
-        // Update existing progress
-        return this.update(existing.id, updateData);
+      if (existingProgress) {
+        // Update existing record
+        const updatedData = {
+          ...updateData,
+          last_interaction: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        return this.update(existingProgress.id, updatedData);
       } else {
         // Create new progress record
         return this.create({
           user_id: userId,
-          lesson_id: lessonId,
-          status: updateData.status || 'not_started',
-          score: updateData.score || 0,
-          attempts: updateData.attempts || 0,
-          time_spent: updateData.time_spent || 0
+          learning_path_id: learningPathId,
+          topic: topic,
+          ...updateData
         });
       }
     } catch (error) {
@@ -65,15 +74,16 @@ export class UserProgressModel extends BaseModel<UserProgress, CreateUserProgres
   }
 
   /**
-   * Get user's progress for a specific lesson
+   * Get user's progress for a specific topic in a learning path
    */
-  async findUserLessonProgress(userId: string, lessonId: string): Promise<UserProgress | null> {
+  async findByUserAndTopic(userId: string, learningPathId: string, topic: string): Promise<UserProgress | null> {
     try {
       const { data, error } = await this.supabase
         .from(this.tableName)
         .select('*')
         .eq('user_id', userId)
-        .eq('lesson_id', lessonId)
+        .eq('learning_path_id', learningPathId)
+        .eq('topic', topic)
         .single();
 
       if (error) {
@@ -104,16 +114,22 @@ export class UserProgressModel extends BaseModel<UserProgress, CreateUserProgres
   }
 
   /**
-   * Get completed lessons for a user
+   * Get completed topics for a user
    */
-  async getCompletedLessons(userId: string): Promise<UserProgress[]> {
+  async getCompletedTopics(userId: string, learningPathId?: string): Promise<UserProgress[]> {
     try {
-      const { data, error } = await this.supabase
+      let query = this.supabase
         .from(this.tableName)
         .select('*')
         .eq('user_id', userId)
-        .eq('status', 'completed')
+        .in('status', ['completed', 'mastered'])
         .order('updated_at', { ascending: false });
+
+      if (learningPathId) {
+        query = query.eq('learning_path_id', learningPathId);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         throw this.handleError(error);
@@ -148,24 +164,27 @@ export class UserProgressModel extends BaseModel<UserProgress, CreateUserProgres
   }
 
   /**
-   * Add time spent on a lesson
+   * Add time spent on a topic
    */
   async addTimeSpent(
     userId: string, 
-    lessonId: string, 
+    learningPathId: string,
+    topic: string,
     timeSpent: number
   ): Promise<UserProgress | null> {
     try {
-      const existing = await this.findUserLessonProgress(userId, lessonId);
+      const existing = await this.findByUserAndTopic(userId, learningPathId, topic);
       
       if (existing) {
         return this.update(existing.id, {
-          time_spent: existing.time_spent + timeSpent
+          time_spent: existing.time_spent + timeSpent,
+          last_interaction: new Date().toISOString()
         });
       } else {
         return this.create({
           user_id: userId,
-          lesson_id: lessonId,
+          learning_path_id: learningPathId,
+          topic: topic,
           time_spent: timeSpent,
           status: 'in_progress'
         });
@@ -176,14 +195,15 @@ export class UserProgressModel extends BaseModel<UserProgress, CreateUserProgres
   }
 
   /**
-   * Complete a lesson
+   * Complete a topic
    */
-  async completeLesson(
+  async completeTopic(
     userId: string, 
-    lessonId: string, 
+    learningPathId: string,
+    topic: string,
     score: number
   ): Promise<UserProgress | null> {
-    return this.updateProgress(userId, lessonId, {
+    return this.updateProgress(userId, learningPathId, topic, {
       status: 'completed',
       score: score,
       completed_at: new Date().toISOString()
@@ -363,11 +383,11 @@ export class UserProgressModel extends BaseModel<UserProgress, CreateUserProgres
   }
 
   /**
-   * Reset progress for a lesson
+   * Reset progress for a topic
    */
-  async resetLessonProgress(userId: string, lessonId: string): Promise<boolean> {
+  async resetTopicProgress(userId: string, learningPathId: string, topic: string): Promise<boolean> {
     try {
-      const existing = await this.findUserLessonProgress(userId, lessonId);
+      const existing = await this.findByUserAndTopic(userId, learningPathId, topic);
       
       if (existing) {
         await this.update(existing.id, {
@@ -375,7 +395,12 @@ export class UserProgressModel extends BaseModel<UserProgress, CreateUserProgres
           score: 0,
           attempts: 0,
           time_spent: 0,
+          current_difficulty: 1.0,
+          recent_scores: [],
+          struggling_areas: [],
+          mastered_concepts: [],
           completed_at: undefined,
+          last_interaction: new Date().toISOString()
         });
       }
 
