@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     // Store generated content in database using the model
     const db = await getDatabase();
-    
+
     try {
       await db.contents.create({
         user_id: user.id,

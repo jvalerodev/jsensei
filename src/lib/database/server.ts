@@ -12,6 +12,9 @@ import { LearningPathModel } from "./models/learning-path-model";
 // Types
 export * from "./types";
 
+// Global server database instance
+let serverDbInstance: ServerDatabaseService | null = null;
+
 /**
  * Database service class that provides access to all models (server-side only)
  */
@@ -44,10 +47,21 @@ export async function createServerDatabase(): Promise<ServerDatabaseService> {
 }
 
 /**
- * Convenience function to get database service in API routes
+ * Get or create the global server database instance
+ * This ensures we only create one instance and reuse it
  */
 export async function getDatabase(): Promise<ServerDatabaseService> {
-  return createServerDatabase();
+  if (!serverDbInstance) {
+    serverDbInstance = await createServerDatabase();
+  }
+  return serverDbInstance;
+}
+
+/**
+ * Reset the server database instance (useful for testing or when needed)
+ */
+export function resetServerDb(): void {
+  serverDbInstance = null;
 }
 
 // Export individual model classes for direct usage if needed

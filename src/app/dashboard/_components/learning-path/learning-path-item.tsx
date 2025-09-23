@@ -1,10 +1,16 @@
-import { CheckCircle, Lock, Play } from "lucide-react";
+"use client";
+import { CheckCircle, Lock, Play, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useTopicContent } from "@/hooks/use-topic-content";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
 
 type LearningPathItemProps = {
   topic: {
+    id: string;
     title: string;
     objective: string;
     topics: string[];
@@ -13,6 +19,7 @@ type LearningPathItemProps = {
   isCompleted: boolean;
   isCurrent: boolean;
   isLocked: boolean;
+  learningPathId?: string;
 };
 
 export function LearningPathItem({
@@ -20,8 +27,60 @@ export function LearningPathItem({
   index,
   isCompleted,
   isCurrent,
-  isLocked
+  isLocked,
+  learningPathId
 }: LearningPathItemProps) {
+  const { generateTopicContent, isLoading } = useTopicContent();
+  const { toast } = useToast();
+  const router = useRouter();
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleContinue = async () => {
+    if (!learningPathId) {
+      toast({
+        title: "Error",
+        description: "No se pudo identificar el learning path",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsGenerating(true);
+
+    try {
+      const result = await generateTopicContent(learningPathId, topic.id);
+
+      if (result) {
+        toast({
+          title: result.wasGenerated
+            ? "Contenido generado"
+            : "Contenido cargado",
+          description: result.wasGenerated
+            ? `Se ha generado el contenido para "${result.topic.title}"`
+            : `Se ha cargado el contenido existente para "${result.topic.title}"`
+        });
+
+        // Navigate to the topic content page
+        router.push(`/topic/${learningPathId}/${topic.id}`);
+      } else {
+        toast({
+          title: "Error",
+          description: "No se pudo generar el contenido del topic",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error handling continue:", error);
+      toast({
+        title: "Error",
+        description: "Ocurrió un error al procesar el topic",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   return (
     <div
       className={cn(
@@ -81,10 +140,16 @@ export function LearningPathItem({
         {isLocked && <Badge variant="outline">Bloqueado</Badge>}
         <Button
           size="sm"
-          disabled={isLocked}
+          disabled={isLocked || isGenerating || isLoading}
           className={isCurrent ? "bg-blue-600 hover:bg-blue-700" : ""}
+          onClick={handleContinue}
         >
-          {isCurrent ? (
+          {isGenerating || isLoading ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              Generando...
+            </>
+          ) : isCurrent ? (
             <>
               <Play className="h-4 w-4 mr-1" />
               Continuar

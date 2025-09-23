@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createServerClient } from "@/lib/supabase/server";
-import { createServerDatabase } from "@/lib/database/server";
+import { getDatabase } from "@/lib/database/server";
 
 import {
   getUserLearningPath,
@@ -29,7 +29,7 @@ export default async function DashboardPage() {
   }
 
   // Get user profile using the database model
-  const db = await createServerDatabase();
+  const db = await getDatabase();
   const profile = await db.users.findById(user.id);
 
   // Check if user needs to take placement test
@@ -38,9 +38,9 @@ export default async function DashboardPage() {
   }
 
   // Get dashboard data
-  const userLearningPath = await getUserLearningPath(db, user.id);
-  const progress = await getUserProgressData(db, user.id);
-  const recentActivity = await getUserRecentActivity(db, user.id);
+  const userLearningPath = await getUserLearningPath(user.id);
+  const progress = await getUserProgressData(user.id);
+  const recentActivity = await getUserRecentActivity(user.id);
 
   // Calculate statistics
   const { totalTopics, completedLessons, overallProgress } =

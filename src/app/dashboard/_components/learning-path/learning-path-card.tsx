@@ -72,11 +72,15 @@ export function LearningPathCard({
             return (
               <LearningPathItem
                 key={`${topic.title}-${index}`}
-                topic={topic}
+                topic={{
+                  ...topic,
+                  id: (topic as any).id || `${learningPath.id}_topic_${index}` // Generate ID if not present
+                }}
                 index={index}
                 isCompleted={isCompleted}
                 isCurrent={isCurrent}
                 isLocked={isLocked}
+                learningPathId={learningPath.id}
               />
             );
           })}
