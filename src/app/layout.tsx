@@ -1,22 +1,23 @@
-import type { Metadata } from 'next'
-import { GeistSans } from 'geist/font/sans'
-import { GeistMono } from 'geist/font/mono'
-import { Toaster } from '@/components/ui/toaster'
-import './globals.css'
+import type { Metadata } from "next";
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
+import { Toaster } from "@/components/ui/toaster";
+import "./globals.css";
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
-  generator: 'v0.app',
-}
+  title: "JSensei",
+  description:
+    "JSensei es un plataforma de aprendizaje en línea que te ayuda a aprender a programar JavaScript con contenido generado por IA.",
+  generator: "JSensei"
+};
 
 export default function RootLayout({
-  children,
+  children
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="es">
       <head>
         <style>{`
 html {
@@ -31,5 +32,5 @@ html {
         <Toaster />
       </body>
     </html>
-  )
+  );
 }
