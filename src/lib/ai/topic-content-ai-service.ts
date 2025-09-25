@@ -1,6 +1,9 @@
 import { generateObject } from "ai";
 import { ollama } from "ollama-ai-provider-v2";
-import { SimpleGeneratedContentSchema, type SimpleGeneratedContent } from "./schemas";
+import {
+  SimpleGeneratedContentSchema,
+  type SimpleGeneratedContent
+} from "./schemas";
 
 /**
  * Servicio de IA para generar contenido específico de topics
@@ -30,7 +33,9 @@ export class TopicContentAIService {
         userStrongAreas
       );
 
-      console.log(`🤖 Generando contenido para topic: "${topicTitle}" con IA...`);
+      console.log(
+        `🤖 Generando contenido para topic: "${topicTitle}" con IA...`
+      );
 
       const result = await generateObject({
         model: ollama(this.DEFAULT_MODEL),
@@ -42,8 +47,13 @@ export class TopicContentAIService {
       console.log(`✅ Contenido generado exitosamente para: "${topicTitle}"`);
       return result.object;
     } catch (error) {
-      console.error(`❌ Error generating content for topic "${topicTitle}":`, error);
-      throw new Error(`Error al generar contenido para el topic: ${topicTitle}`);
+      console.error(
+        `❌ Error generating content for topic "${topicTitle}":`,
+        error
+      );
+      throw new Error(
+        `Error al generar contenido para el topic: ${topicTitle}`
+      );
     }
   }
 
@@ -58,9 +68,10 @@ export class TopicContentAIService {
     userWeakAreas: string[],
     userStrongAreas: string[]
   ): string {
-    const levelDescription = userSkillLevel === "beginner" 
-      ? "principiante (conceptos básicos, explicaciones detalladas)" 
-      : "intermedio (conceptos más avanzados, menos explicaciones básicas)";
+    const levelDescription =
+      userSkillLevel === "beginner"
+        ? "principiante (conceptos básicos, explicaciones detalladas)"
+        : "intermedio (conceptos más avanzados, menos explicaciones básicas)";
 
     return `Eres un tutor experto de JavaScript. Genera contenido educativo completo para un topic específico.
 
@@ -71,16 +82,24 @@ INFORMACIÓN DEL TOPIC:
 
 INFORMACIÓN DEL ESTUDIANTE:
 - Nivel: ${userSkillLevel} (${levelDescription})
-- Áreas débiles: ${userWeakAreas.length > 0 ? userWeakAreas.join(", ") : "Ninguna identificada"}
-- Áreas fuertes: ${userStrongAreas.length > 0 ? userStrongAreas.join(", ") : "Ninguna identificada"}
+- Áreas débiles: ${
+      userWeakAreas.length > 0
+        ? userWeakAreas.join(", ")
+        : "Ninguna identificada"
+    }
+- Áreas fuertes: ${
+      userStrongAreas.length > 0
+        ? userStrongAreas.join(", ")
+        : "Ninguna identificada"
+    }
 
 INSTRUCCIONES:
 1. Genera una lección completa que cubra todos los temas mencionados
 2. Adapta el contenido al nivel del estudiante
 3. Si hay áreas débiles relacionadas, enfócate más en esas
 4. Incluye explicaciones claras y progresivas
-5. Proporciona 2-3 ejemplos de código prácticos y bien comentados
-6. Crea 3-4 ejercicios prácticos de diferentes tipos:
+5. Proporciona 1 ejemplo de código práctico y bien comentado
+6. Crea 1 ejercicio práctico de diferentes tipos:
    - multiple-choice: Preguntas de opción múltiple
    - code-completion: Completar código
    - debugging: Encontrar y corregir errores

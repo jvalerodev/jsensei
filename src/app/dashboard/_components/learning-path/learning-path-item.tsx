@@ -61,7 +61,7 @@ export function LearningPathItem({
         });
 
         // Navigate to the topic content page
-        router.push(`/topic/${learningPathId}/${topic.id}`);
+        router.push(`/content/${learningPathId}/${topic.id}`);
       } else {
         toast({
           title: "Error",
