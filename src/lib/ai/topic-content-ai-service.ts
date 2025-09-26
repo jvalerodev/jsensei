@@ -113,7 +113,7 @@ FORMATO DE RESPUESTA (JSON):
   "examples": [
     {
       "title": "Nombre del ejemplo",
-      "code": "// Código JavaScript bien comentado\\nconsole.log('ejemplo');",
+      "code": "// Código JavaScript bien comentado\nconsole.log('ejemplo');",
       "explanation": "Explicación detallada de qué hace el código y por qué es importante"
     }
   ],

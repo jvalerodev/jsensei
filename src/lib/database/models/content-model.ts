@@ -1,32 +1,38 @@
 // Content model v2.1 - handles unified content (lessons, exercises, quizzes, etc.)
-import { SupabaseClient } from '@supabase/supabase-js';
-import { BaseModel } from '../base-model';
-import { 
-  Content, 
-  CreateContentData, 
+import { SupabaseClient } from "@supabase/supabase-js";
+import { BaseModel } from "../base-model";
+import {
+  Content,
+  CreateContentData,
   UpdateContentData,
   ContentType,
   SkillLevel,
   QueryOptions,
-  PaginatedResult 
-} from '../types';
+  PaginatedResult
+} from "../types";
 
-export class ContentModel extends BaseModel<Content, CreateContentData, UpdateContentData> {
+export class ContentModel extends BaseModel<
+  Content,
+  CreateContentData,
+  UpdateContentData
+> {
   constructor(supabase: SupabaseClient) {
-    super(supabase, 'contents');
+    super(supabase, "contents");
   }
 
   /**
    * Create content with validation
    */
   async create(contentData: CreateContentData): Promise<Content> {
-    this.validateRequired(contentData, ['title', 'content_type', 'skill_level', 'content']);
+    this.validateRequired(contentData, [
+      "title",
+      "content_type",
+      "skill_level",
+      "content"
+    ]);
 
     const sanitizedData = this.sanitizeData({
       ...contentData,
-      content: typeof contentData.content === 'object' 
-        ? JSON.stringify(contentData.content) 
-        : contentData.content,
       difficulty_adjustment: contentData.difficulty_adjustment || 1.0,
       estimated_duration: contentData.estimated_duration || 15,
       order_index: contentData.order_index || 0,
@@ -49,8 +55,10 @@ export class ContentModel extends BaseModel<Content, CreateContentData, UpdateCo
     options: QueryOptions = {}
   ): Promise<PaginatedResult<Content>> {
     try {
-      const { data, error } = await this.supabase
-        .rpc('get_contents_by_topic_id', { p_topic_id: topicId });
+      const { data, error } = await this.supabase.rpc(
+        "get_contents_by_topic_id",
+        { p_topic_id: topicId }
+      );
 
       if (error) {
         throw this.handleError(error);
@@ -70,14 +78,17 @@ export class ContentModel extends BaseModel<Content, CreateContentData, UpdateCo
    * Get user's content
    */
   async getUserContent(
-    userId: string, 
+    userId: string,
     options: QueryOptions = {}
   ): Promise<PaginatedResult<Content>> {
-    const result = await this.findAll({ user_id: userId }, {
-      ...options,
-      orderBy: options.orderBy || 'created_at',
-      orderDirection: options.orderDirection || 'desc'
-    });
+    const result = await this.findAll(
+      { user_id: userId },
+      {
+        ...options,
+        orderBy: options.orderBy || "created_at",
+        orderDirection: options.orderDirection || "desc"
+      }
+    );
 
     return {
       ...result,
@@ -92,11 +103,14 @@ export class ContentModel extends BaseModel<Content, CreateContentData, UpdateCo
     learningPathId: string,
     options: QueryOptions = {}
   ): Promise<PaginatedResult<Content>> {
-    const result = await this.findAll({ learning_path_id: learningPathId }, {
-      ...options,
-      orderBy: options.orderBy || 'order_index',
-      orderDirection: options.orderDirection || 'asc'
-    });
+    const result = await this.findAll(
+      { learning_path_id: learningPathId },
+      {
+        ...options,
+        orderBy: options.orderBy || "order_index",
+        orderDirection: options.orderDirection || "asc"
+      }
+    );
 
     return {
       ...result,
@@ -112,11 +126,14 @@ export class ContentModel extends BaseModel<Content, CreateContentData, UpdateCo
     skillLevel: SkillLevel,
     options: QueryOptions = {}
   ): Promise<PaginatedResult<Content>> {
-    const result = await this.findAll({ 
-      content_type: contentType,
-      skill_level: skillLevel,
-      is_active: true
-    }, options);
+    const result = await this.findAll(
+      {
+        content_type: contentType,
+        skill_level: skillLevel,
+        is_active: true
+      },
+      options
+    );
 
     return {
       ...result,
@@ -131,15 +148,18 @@ export class ContentModel extends BaseModel<Content, CreateContentData, UpdateCo
     userId: string,
     options: QueryOptions = {}
   ): Promise<PaginatedResult<Content>> {
-    const result = await this.findAll({ 
-      user_id: userId,
-      is_generated_by_ai: true,
-      is_active: true
-    }, {
-      ...options,
-      orderBy: options.orderBy || 'created_at',
-      orderDirection: options.orderDirection || 'desc'
-    });
+    const result = await this.findAll(
+      {
+        user_id: userId,
+        is_generated_by_ai: true,
+        is_active: true
+      },
+      {
+        ...options,
+        orderBy: options.orderBy || "created_at",
+        orderDirection: options.orderDirection || "desc"
+      }
+    );
 
     return {
       ...result,
@@ -155,11 +175,13 @@ export class ContentModel extends BaseModel<Content, CreateContentData, UpdateCo
     userId?: string
   ): Promise<any> {
     try {
-      const { data, error } = await this.supabase
-        .rpc('generate_contents_from_learning_path', {
+      const { data, error } = await this.supabase.rpc(
+        "generate_contents_from_learning_path",
+        {
           p_learning_path_id: learningPathId,
           p_user_id: userId || null
-        });
+        }
+      );
 
       if (error) {
         throw this.handleError(error);
@@ -186,28 +208,28 @@ export class ContentModel extends BaseModel<Content, CreateContentData, UpdateCo
     try {
       let query = this.supabase
         .from(this.tableName)
-        .select('*', { count: 'exact' })
+        .select("*", { count: "exact" })
         .or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`)
-        .eq('is_active', true);
+        .eq("is_active", true);
 
       // Apply filters
       if (filters.contentType) {
-        query = query.eq('content_type', filters.contentType);
+        query = query.eq("content_type", filters.contentType);
       }
       if (filters.skillLevel) {
-        query = query.eq('skill_level', filters.skillLevel);
+        query = query.eq("skill_level", filters.skillLevel);
       }
       if (filters.userId) {
-        query = query.eq('user_id', filters.userId);
+        query = query.eq("user_id", filters.userId);
       }
 
       // Apply ordering
       if (options.orderBy) {
-        query = query.order(options.orderBy, { 
-          ascending: options.orderDirection !== 'desc' 
+        query = query.order(options.orderBy, {
+          ascending: options.orderDirection !== "desc"
         });
       } else {
-        query = query.order('created_at', { ascending: false });
+        query = query.order("created_at", { ascending: false });
       }
 
       // Apply pagination
@@ -215,7 +237,10 @@ export class ContentModel extends BaseModel<Content, CreateContentData, UpdateCo
         query = query.limit(options.limit);
       }
       if (options.offset) {
-        query = query.range(options.offset, options.offset + (options.limit || 10) - 1);
+        query = query.range(
+          options.offset,
+          options.offset + (options.limit || 10) - 1
+        );
       }
 
       const { data, error, count } = await query;
@@ -225,9 +250,9 @@ export class ContentModel extends BaseModel<Content, CreateContentData, UpdateCo
       }
 
       const totalCount = count || 0;
-      const hasMore = options.limit ? 
-        (options.offset || 0) + (options.limit || 0) < totalCount : 
-        false;
+      const hasMore = options.limit
+        ? (options.offset || 0) + (options.limit || 0) < totalCount
+        : false;
 
       return {
         data: (data || []).map(this.parseContent),
@@ -245,9 +270,10 @@ export class ContentModel extends BaseModel<Content, CreateContentData, UpdateCo
   private parseContent(contentData: any): Content {
     return {
       ...contentData,
-      content: typeof contentData.content === 'string' 
-        ? JSON.parse(contentData.content) 
-        : contentData.content,
+      content:
+        typeof contentData.content === "string"
+          ? JSON.parse(contentData.content)
+          : contentData.content,
       target_weak_areas: contentData.target_weak_areas || [],
       target_strong_areas: contentData.target_strong_areas || []
     };
@@ -264,12 +290,16 @@ export class ContentModel extends BaseModel<Content, CreateContentData, UpdateCo
   /**
    * Update content with parsing
    */
-  async update(id: string, updateData: UpdateContentData): Promise<Content | null> {
+  async update(
+    id: string,
+    updateData: UpdateContentData
+  ): Promise<Content | null> {
     const sanitizedData = this.sanitizeData({
       ...updateData,
-      content: updateData.content && typeof updateData.content === 'object'
-        ? JSON.stringify(updateData.content)
-        : updateData.content,
+      content:
+        updateData.content && typeof updateData.content === "object"
+          ? JSON.stringify(updateData.content)
+          : updateData.content,
       updated_at: new Date().toISOString()
     });
 
@@ -289,22 +319,26 @@ export class ContentModel extends BaseModel<Content, CreateContentData, UpdateCo
     try {
       const { data } = await this.supabase
         .from(this.tableName)
-        .select('content_type, skill_level, is_generated_by_ai')
-        .eq('is_active', true);
+        .select("content_type, skill_level, is_generated_by_ai")
+        .eq("is_active", true);
 
       const totalContent = data?.length || 0;
-      
+
       const contentByType = (data || []).reduce((acc, item) => {
-        acc[item.content_type as ContentType] = (acc[item.content_type as ContentType] || 0) + 1;
+        acc[item.content_type as ContentType] =
+          (acc[item.content_type as ContentType] || 0) + 1;
         return acc;
       }, {} as Record<ContentType, number>);
 
       const contentBySkillLevel = (data || []).reduce((acc, item) => {
-        acc[item.skill_level as SkillLevel] = (acc[item.skill_level as SkillLevel] || 0) + 1;
+        acc[item.skill_level as SkillLevel] =
+          (acc[item.skill_level as SkillLevel] || 0) + 1;
         return acc;
       }, {} as Record<SkillLevel, number>);
 
-      const aiGeneratedCount = (data || []).filter(item => item.is_generated_by_ai).length;
+      const aiGeneratedCount = (data || []).filter(
+        (item) => item.is_generated_by_ai
+      ).length;
 
       return {
         totalContent,

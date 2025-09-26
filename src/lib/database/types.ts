@@ -1,9 +1,22 @@
 // Database types and interfaces for JSensei v2.1
-export type SkillLevel = 'beginner' | 'intermediate';
-export type DifficultyLevel = 'beginner' | 'intermediate';
-export type ContentType = 'lesson' | 'exercise' | 'quiz' | 'explanation' | 'example';
-export type InteractionType = 'placement_answer' | 'exercise_answer' | 'lesson_completion' | 'quiz_answer';
-export type ProgressStatus = 'not_started' | 'in_progress' | 'completed' | 'mastered';
+export type SkillLevel = "beginner" | "intermediate";
+export type DifficultyLevel = "beginner" | "intermediate";
+export type ContentType =
+  | "lesson"
+  | "exercise"
+  | "quiz"
+  | "explanation"
+  | "example";
+export type InteractionType =
+  | "placement_answer"
+  | "exercise_answer"
+  | "lesson_completion"
+  | "quiz_answer";
+export type ProgressStatus =
+  | "not_started"
+  | "in_progress"
+  | "completed"
+  | "mastered";
 
 // User related types
 export interface User {
@@ -90,7 +103,7 @@ export interface Content {
   description?: string;
   content_type: ContentType;
   skill_level: SkillLevel;
-  content: any; // JSON content
+  content: ContentLesson; // JSON content
   difficulty_adjustment: number;
   estimated_duration: number;
   order_index: number;
@@ -100,6 +113,24 @@ export interface Content {
   target_strong_areas: string[];
   created_at: string;
   updated_at: string;
+}
+
+export interface ContentLesson {
+  title: string;
+  content?: string;
+  examples?: Array<{
+    code: string;
+    title: string;
+    explanation: string;
+  }>;
+  exercises?: Array<{
+    id: string;
+    type: string;
+    question: string;
+    difficulty: string;
+    explanation: string;
+    correctAnswer: string;
+  }>;
 }
 
 export interface CreateContentData {
@@ -263,7 +294,7 @@ export interface QueryOptions {
   limit?: number;
   offset?: number;
   orderBy?: string;
-  orderDirection?: 'asc' | 'desc';
+  orderDirection?: "asc" | "desc";
 }
 
 export interface PaginatedResult<T> {

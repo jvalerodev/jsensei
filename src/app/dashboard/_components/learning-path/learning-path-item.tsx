@@ -141,7 +141,10 @@ export function LearningPathItem({
         <Button
           size="sm"
           disabled={isLocked || isGenerating || isLoading}
-          className={isCurrent ? "bg-blue-600 hover:bg-blue-700" : ""}
+          className={cn(
+            "cursor-pointer",
+            isCurrent && "bg-blue-600 hover:bg-blue-700"
+          )}
           onClick={handleContinue}
         >
           {isGenerating || isLoading ? (
