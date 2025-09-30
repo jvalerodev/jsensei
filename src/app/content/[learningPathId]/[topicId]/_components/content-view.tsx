@@ -96,7 +96,25 @@ export function TopicContentView({
 
   const { topic, learningPath, content } = topicData;
   const lesson = content.find((c) => c.content_type === "lesson");
-  const exercise = content.find((c) => c.content_type === "exercise");
+
+  // Filter ALL exercises and extract their content, sorted by order_index
+  const exercises = content
+    .filter((c) => c.content_type === "exercise")
+    .sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
+    .map((exerciseItem) => {
+      // Extract the exercise data from the content field
+      const exerciseContent = exerciseItem.content as any;
+      return {
+        id: exerciseContent.id || exerciseItem.id,
+        question: exerciseContent.question,
+        type: exerciseContent.type,
+        options: exerciseContent.options || [],
+        correctAnswer: exerciseContent.correctAnswer,
+        explanation: exerciseContent.explanation,
+        difficulty: exerciseContent.difficulty
+      };
+    })
+    .filter((ex) => ex.question); // Only include valid exercises with a question
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -108,11 +126,7 @@ export function TopicContentView({
 
       {lesson && <LessonContent lesson={lesson} />}
 
-      {exercise &&
-        exercise.content?.exercises &&
-        exercise.content.exercises.length > 0 && (
-          <ExerciseSection exercises={exercise.content.exercises} />
-        )}
+      {exercises.length > 0 && <ExerciseSection exercises={exercises} />}
 
       <ActionButtons
         onBackToDashboard={handleBackToDashboard}

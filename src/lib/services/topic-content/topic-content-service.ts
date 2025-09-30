@@ -84,15 +84,7 @@ export class TopicContentService {
         userStrongAreas
       );
 
-      // Add unique IDs to exercises for database compatibility
-      const exercisesWithIds = (lessonContent.exercises || []).map(
-        (exercise) => ({
-          ...exercise,
-          id: randomUUID()
-        })
-      );
-
-      // Create lesson content in database
+      // Create lesson content in database (WITHOUT exercises)
       const lessonData: CreateContentData = {
         user_id: userId,
         learning_path_id: learningPathId,
@@ -104,8 +96,8 @@ export class TopicContentService {
         content: {
           title: lessonContent.title,
           content: lessonContent.content,
-          examples: lessonContent.examples || [],
-          exercises: exercisesWithIds
+          examples: lessonContent.examples || []
+          // ⚠️ exercises NOT included here - they're saved as separate items
         },
         estimated_duration: 20, // Increased for AI-generated content
         order_index: 0,
@@ -114,36 +106,47 @@ export class TopicContentService {
         target_strong_areas: userStrongAreas
       };
 
-      console.log(`💾 Saving lesson content to database...`);
+      console.log(`💾 Saving lesson content to database (without exercises)...`);
       const createdLesson = await db.contents.create(lessonData);
       generatedContents.push(createdLesson);
       console.log(`✅ Lesson content saved with ID: ${createdLesson.id}`);
 
-      // Generate separate exercise content if the lesson has exercises
-      if (exercisesWithIds && exercisesWithIds.length > 0) {
-        const exerciseData: CreateContentData = {
-          user_id: userId,
-          learning_path_id: learningPathId,
-          topic_id: topicId,
-          title: `Ejercicios: ${topic.title}`,
-          description: `Ejercicios prácticos para ${topic.title}`,
-          content_type: "exercise",
-          skill_level: userSkillLevel,
-          content: {
-            title: `Ejercicios: ${topic.title}`,
-            exercises: exercisesWithIds
-          },
-          estimated_duration: 15, // Increased for AI-generated exercises
-          order_index: 1,
-          is_generated_by_ai: true,
-          target_weak_areas: userWeakAreas,
-          target_strong_areas: userStrongAreas
-        };
+      // Save each exercise as a separate content item
+      const exercises = lessonContent.exercises || [];
+      if (exercises.length > 0) {
+        console.log(`📝 Saving ${exercises.length} exercises as individual items...`);
+        
+        for (let i = 0; i < exercises.length; i++) {
+          const exercise = exercises[i];
+          const exerciseData: CreateContentData = {
+            user_id: userId,
+            learning_path_id: learningPathId,
+            topic_id: topicId,
+            title: `Ejercicio ${i + 1}: ${topic.title}`,
+            description: exercise.question.substring(0, 100), // First 100 chars as description
+            content_type: "exercise",
+            skill_level: userSkillLevel,
+            content: {
+              id: randomUUID(),
+              question: exercise.question,
+              type: exercise.type,
+              options: exercise.options || [],
+              correctAnswer: exercise.correctAnswer,
+              explanation: exercise.explanation,
+              difficulty: exercise.difficulty
+            },
+            estimated_duration: 5, // ~5 minutes per exercise
+            order_index: i + 1, // Start from 1 (lesson is 0)
+            is_generated_by_ai: true,
+            target_weak_areas: userWeakAreas,
+            target_strong_areas: userStrongAreas
+          };
 
-        console.log(`💾 Saving exercise content to database...`);
-        const createdExercise = await db.contents.create(exerciseData);
-        generatedContents.push(createdExercise);
-        console.log(`✅ Exercise content saved with ID: ${createdExercise.id}`);
+          console.log(`  💾 Saving exercise ${i + 1}/${exercises.length}...`);
+          const createdExercise = await db.contents.create(exerciseData);
+          generatedContents.push(createdExercise);
+          console.log(`  ✅ Exercise ${i + 1} saved with ID: ${createdExercise.id}`);
+        }
       }
 
       console.log(
