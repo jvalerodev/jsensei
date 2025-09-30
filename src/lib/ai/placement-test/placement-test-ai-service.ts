@@ -6,14 +6,14 @@ import {
   type PlacementAnalysis,
   type LearningPath,
   type PlacementTestData
-} from "./schemas";
+} from "../schemas";
 import { randomUUID } from "node:crypto";
 
 /**
  * Servicio simplificado de IA para JSensei
  * Se enfoca únicamente en análisis de pruebas de nivelación y generación de planes de aprendizaje concisos
  */
-export class AIService {
+export class PlacementTestAIService {
   // Modelo local configurado
   private static readonly DEFAULT_MODEL = "codellama:7b";
 

@@ -7,7 +7,7 @@ import {
   getUserProgressData,
   getUserRecentActivity,
   calculateDashboardStats
-} from "@/lib/services/dashboard-service";
+} from "@/lib/services";
 import {
   DashboardHeader,
   DashboardSidebar,

@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
-import { TopicContentService } from "@/lib/services/topic-content-service";
+import { TopicContentService } from "@/lib/services";
 import { z } from "zod";
 import { LearningPathService, UserService } from "@/lib/services";
 

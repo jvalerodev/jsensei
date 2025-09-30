@@ -1,16 +1,16 @@
 import { generateObject } from "ai";
-import { ollama } from "ollama-ai-provider-v2";
+import { google } from "../google";
 import {
   SimpleGeneratedContentSchema,
   type SimpleGeneratedContent
-} from "./schemas";
+} from "../schemas";
 
 /**
  * Servicio de IA para generar contenido específico de topics
  */
 export class TopicContentAIService {
   // Modelo local configurado
-  private static readonly DEFAULT_MODEL = "codellama:7b";
+  private static readonly DEFAULT_MODEL = "gemini-2.5-flash";
 
   /**
    * Genera contenido educativo para un topic específico usando IA
@@ -38,10 +38,10 @@ export class TopicContentAIService {
       );
 
       const result = await generateObject({
-        model: ollama(this.DEFAULT_MODEL),
+        model: google(this.DEFAULT_MODEL),
         schema: SimpleGeneratedContentSchema,
         prompt,
-        temperature: 0.7
+        temperature: 0.8
       });
 
       console.log(`✅ Contenido generado exitosamente para: "${topicTitle}"`);
@@ -119,11 +119,11 @@ FORMATO DE RESPUESTA (JSON):
   ],
   "exercises": [
     {
-      "question": "Pregunta del ejercicio",
+      "question": "*Pregunta del ejercicio*",
       "type": "multiple-choice" | "code-completion" | "debugging" | "coding",
       "options": ["opción1", "opción2", "opción3", "opción4"] // Solo para multiple-choice,
-      "correctAnswer": "Respuesta correcta",
-      "explanation": "Explicación detallada de por qué esta es la respuesta correcta",
+      "correctAnswer": "*Respuesta correcta*",
+      "explanation": "*Explicación detallada de por qué esta es la respuesta correcta*",
       "difficulty": "${userSkillLevel}"
     }
   ]

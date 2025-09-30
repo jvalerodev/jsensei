@@ -1,9 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { createServerClient } from "@/lib/supabase/server";
 import { getDatabase } from "@/lib/database/server";
+import { PlacementTestService } from "@/lib/services";
 import type { LearningPath } from "@/lib/database/types";
-import { PlacementTestService } from "@/lib/ai/placement-test-service";
-import { z } from "zod";
 
 // Esquema de validación para el request
 const PersonalizedContentRequestSchema = z.object({

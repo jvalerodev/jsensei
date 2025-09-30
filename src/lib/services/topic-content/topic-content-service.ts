@@ -1,11 +1,11 @@
+import { TopicContentAIService } from "@/lib/ai";
+import { getDatabase } from "@/lib/database/server";
+import { randomUUID } from "node:crypto";
 import type {
   Content,
   CreateContentData,
   LearningPath
 } from "@/lib/database/types";
-import { TopicContentAIService } from "@/lib/ai/topic-content-ai-service";
-import { getDatabase } from "@/lib/database/server";
-import { randomUUID } from "node:crypto";
 
 /**
  * Service for managing topic content generation and retrieval
