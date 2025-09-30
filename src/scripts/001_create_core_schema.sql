@@ -112,8 +112,6 @@ CREATE TABLE IF NOT EXISTS public.user_progress (
   learning_path_id UUID NOT NULL REFERENCES public.learning_paths(id) ON DELETE CASCADE,
   content_id UUID REFERENCES public.contents(id) ON DELETE CASCADE,
   
-  -- Progreso específico
-  topic TEXT NOT NULL,
   status TEXT CHECK (status IN ('not_started', 'in_progress', 'completed', 'mastered')) DEFAULT 'not_started',
   
   -- Métricas
