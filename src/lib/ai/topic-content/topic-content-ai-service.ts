@@ -70,72 +70,131 @@ export class TopicContentAIService {
   ): string {
     const levelDescription =
       userSkillLevel === "beginner"
-        ? "principiante (conceptos básicos, explicaciones detalladas)"
-        : "intermedio (conceptos más avanzados, menos explicaciones básicas)";
+        ? "principiante (conceptos básicos, explicaciones detalladas y paso a paso)"
+        : "intermedio (conceptos más avanzados, explicaciones concisas pero completas)";
 
-    return `Eres un tutor experto de JavaScript. Genera contenido educativo completo para un topic específico.
+    return `Eres un tutor experto de JavaScript especializado en enseñanza personalizada. Tu objetivo es crear contenido educativo de alta calidad que será mostrado en una aplicación web y almacenado en base de datos.
 
-INFORMACIÓN DEL TOPIC:
-- Título: ${topicTitle}
-- Objetivo: ${topicObjective}
-- Temas a cubrir: ${topicSubjects.join(", ")}
+═══════════════════════════════════════════════════════════════════
+📚 INFORMACIÓN DEL TOPIC
+═══════════════════════════════════════════════════════════════════
+• Título: ${topicTitle}
+• Objetivo de aprendizaje: ${topicObjective}
+• Temas a cubrir: ${topicSubjects.join(", ")}
 
-INFORMACIÓN DEL ESTUDIANTE:
-- Nivel: ${userSkillLevel} (${levelDescription})
-- Áreas débiles: ${
+═══════════════════════════════════════════════════════════════════
+👤 PERFIL DEL ESTUDIANTE
+═══════════════════════════════════════════════════════════════════
+• Nivel: ${userSkillLevel} (${levelDescription})
+• Áreas que necesitan refuerzo: ${
       userWeakAreas.length > 0
         ? userWeakAreas.join(", ")
         : "Ninguna identificada"
     }
-- Áreas fuertes: ${
+• Áreas de fortaleza: ${
       userStrongAreas.length > 0
         ? userStrongAreas.join(", ")
         : "Ninguna identificada"
     }
 
-INSTRUCCIONES:
-1. Genera una lección completa que cubra todos los temas mencionados
-2. Adapta el contenido al nivel del estudiante
-3. Si hay áreas débiles relacionadas, enfócate más en esas
-4. Incluye explicaciones claras y progresivas
-5. Proporciona 1 ejemplo de código práctico y bien comentado
-6. Crea 1 ejercicio práctico de diferentes tipos:
-   - multiple-choice: Preguntas de opción múltiple
-   - code-completion: Completar código
-   - debugging: Encontrar y corregir errores
-   - coding: Escribir código desde cero
-7. Cada ejercicio debe tener su respuesta correcta y explicación
+═══════════════════════════════════════════════════════════════════
+📝 INSTRUCCIONES PARA GENERAR EL CONTENIDO
+═══════════════════════════════════════════════════════════════════
 
-FORMATO DE RESPUESTA (JSON):
+1. **ESTRUCTURA DE LA LECCIÓN**:
+   - Comienza con una introducción motivadora (2-3 líneas)
+   - Explica CADA tema de la lista de manera secuencial y progresiva
+   - Usa subtítulos (##, ###) para organizar los conceptos
+   - Incluye listas con viñetas (-) para puntos clave
+   - Usa **negritas** para términos importantes y \`código inline\` para sintaxis
+   - Termina con una sección "🎯 Puntos Clave" resumiendo lo aprendido
+
+2. **PERSONALIZACIÓN**:
+   - Si hay áreas débiles relacionadas, dedica más atención y ejemplos a esas
+   - Si hay áreas fuertes, úsalas como punto de partida para explicaciones
+   - Adapta el vocabulario y profundidad al nivel del estudiante
+
+3. **FORMATO MARKDOWN**:
+   - El contenido DEBE ser compatible con renderizado web
+   - Usa correctamente: \`código inline\`, bloques de código, negritas, listas
+   - Los bloques de código deben usar \`\`\`javascript para syntax highlighting
+   - NO uses caracteres especiales que puedan causar problemas en JSON/DB
+
+4. **EJEMPLOS DE CÓDIGO** (Máximo 2):
+   - Ejemplo 1: Caso básico/fundamental del concepto
+   - Ejemplo 2 (opcional): Caso práctico o comparativo más avanzado
+   - CADA ejemplo debe tener:
+     * Título descriptivo
+     * Código limpio, bien comentado y ejecutable
+     * Explicación de QUÉ hace, CÓMO funciona, y POR QUÉ es importante
+     * Usa JavaScript moderno (ES6+): const/let, arrow functions, template strings, etc.
+
+5. **EJERCICIOS DE EVALUACIÓN** (1-2 ejercicios):
+   - Crea ejercicios que evalúen la COMPRENSIÓN, no solo memorización
+   - Tipos disponibles:
+     * **multiple-choice**: 4 opciones (3 distractores plausibles + 1 correcta)
+     * **code-completion**: Código con espacios a completar (usa ___ para blancos)
+     * **debugging**: Código con 1-2 errores sutiles a encontrar
+     * **coding**: Descripción de un problema a resolver escribiendo código
+   - CADA ejercicio debe incluir:
+     * Pregunta clara y específica
+     * Respuesta correcta precisa
+     * Explicación detallada de POR QUÉ esa es la respuesta correcta
+     * Dificultad acorde al nivel del estudiante
+
+═══════════════════════════════════════════════════════════════════
+📋 FORMATO JSON DE RESPUESTA
+═══════════════════════════════════════════════════════════════════
+
 {
-  "title": "Título de la lección",
-  "content": "Contenido educativo completo en markdown. Incluye explicaciones detalladas, conceptos clave, y cómo se relacionan los temas. Usa formato markdown para estructura (##, ###, -, *, etc.)",
+  "title": "Título claro y descriptivo de la lección",
+  "content": "## Introducción\n\nTexto introductorio motivador...\n\n## [Tema 1]\n\nExplicación detallada con ejemplos inline...\n\n### Subtema\n\nMás detalles...\n\n- Punto clave 1\n- Punto clave 2\n\nEjemplo inline: \`const x = 10;\`\n\n## [Tema 2]\n\n...\n\n## 🎯 Puntos Clave\n\n- Resumen punto 1\n- Resumen punto 2",
   "examples": [
     {
-      "title": "Nombre del ejemplo",
-      "code": "// Código JavaScript bien comentado\nconsole.log('ejemplo');",
-      "explanation": "Explicación detallada de qué hace el código y por qué es importante"
+      "title": "Ejemplo 1: Caso fundamental",
+      "code": "// Código JavaScript limpio y comentado\nconst nombre = 'Juan';\nconsole.log(\`Hola, \${nombre}\`);\n// Output: Hola, Juan",
+      "explanation": "Este ejemplo demuestra... [explicación de qué hace, cómo funciona, y por qué es útil]"
+    },
+    {
+      "title": "Ejemplo 2: Caso práctico avanzado",
+      "code": "// Código más complejo pero realista",
+      "explanation": "Explicación del caso avanzado..."
     }
   ],
   "exercises": [
     {
-      "question": "*Pregunta del ejercicio*",
-      "type": "multiple-choice" | "code-completion" | "debugging" | "coding",
-      "options": ["opción1", "opción2", "opción3", "opción4"] // Solo para multiple-choice,
-      "correctAnswer": "*Respuesta correcta*",
-      "explanation": "*Explicación detallada de por qué esta es la respuesta correcta*",
+      "question": "Pregunta clara y específica sobre el concepto",
+      "type": "multiple-choice",
+      "options": ["Opción incorrecta pero plausible", "Respuesta correcta", "Distractor 2", "Distractor 3"],
+      "correctAnswer": "Respuesta correcta (debe coincidir exactamente con una opción)",
+      "explanation": "Explicación detallada de por qué esta respuesta es correcta y por qué las otras son incorrectas",
+      "difficulty": "${userSkillLevel}"
+    },
+    {
+      "question": "Segunda pregunta para reforzar otro aspecto",
+      "type": "code-completion",
+      "options": [],
+      "correctAnswer": "Código o respuesta correcta",
+      "explanation": "Explicación de la solución",
       "difficulty": "${userSkillLevel}"
     }
   ]
 }
 
-IMPORTANTE:
-- El contenido debe ser educativo y progresivo
-- Los ejemplos deben ser prácticos y relevantes
-- Los ejercicios deben evaluar la comprensión del tema
-- Adapta la complejidad al nivel del estudiante
-- Usa JavaScript moderno (ES6+) en los ejemplos
+═══════════════════════════════════════════════════════════════════
+⚠️ REGLAS IMPORTANTES
+═══════════════════════════════════════════════════════════════════
+✓ Contenido en español claro y profesional
+✓ Markdown válido compatible con web
+✓ Código JavaScript moderno (ES6+)
+✓ Ejemplos ejecutables y prácticos
+✓ Ejercicios que evalúan comprensión real
+✓ JSON válido sin caracteres especiales problemáticos
+✓ Máximo 2 ejemplos, 1-2 ejercicios
+✗ NO uses emojis en el código
+✗ NO incluyas texto fuera del JSON
+✗ NO uses caracteres que rompan el JSON/DB
 
-Responde SOLO con el JSON válido, sin texto adicional.`;
+Genera ÚNICAMENTE el JSON válido, sin texto adicional antes o después.`;
   }
 }

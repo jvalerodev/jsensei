@@ -1,4 +1,5 @@
 import { Play } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 import {
   Card,
   CardContent,
@@ -23,6 +24,23 @@ type ExerciseSectionProps = {
 };
 
 export function ExerciseSection({ exercises }: ExerciseSectionProps) {
+  // Componentes de markdown reutilizables para los ejercicios
+  const markdownComponents = {
+    code: ({ children, ...props }: any) => (
+      <code
+        className="bg-slate-100 text-rose-600 px-1.5 py-0.5 rounded text-sm font-[monospace]"
+        {...props}
+      >
+        {children}
+      </code>
+    ),
+    p: ({ children }: any) => <span className="inline">{children}</span>,
+    strong: ({ children }: any) => (
+      <strong className="font-semibold text-slate-800">{children}</strong>
+    ),
+    em: ({ children }: any) => <em className="italic">{children}</em>
+  };
+
   return (
     <Card className="mb-6">
       <CardHeader>
@@ -48,16 +66,24 @@ export function ExerciseSection({ exercises }: ExerciseSectionProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-slate-700 mb-4">{exercise.question}</p>
+                <div className="text-slate-700 mb-4">
+                  <ReactMarkdown components={markdownComponents}>
+                    {exercise.question}
+                  </ReactMarkdown>
+                </div>
 
                 {exercise.options && (
                   <div className="space-y-2 mb-4">
                     {exercise.options.map((option, optIndex) => (
-                      <div key={optIndex} className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full border-2 border-slate-300 flex items-center justify-center text-xs font-medium">
+                      <div key={optIndex} className="flex items-start gap-2">
+                        <div className="w-6 h-6 rounded-full border-2 border-slate-300 flex items-center justify-center text-xs font-medium flex-shrink-0 mt-0.5">
                           {String.fromCharCode(65 + optIndex)}
                         </div>
-                        <span className="text-slate-700">{option}</span>
+                        <div className="text-slate-700 flex-1">
+                          <ReactMarkdown components={markdownComponents}>
+                            {option}
+                          </ReactMarkdown>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -68,12 +94,31 @@ export function ExerciseSection({ exercises }: ExerciseSectionProps) {
                     Ver respuesta y explicación
                   </summary>
                   <div className="mt-3 p-4 bg-blue-50 rounded-lg">
-                    <p className="font-medium text-blue-900 mb-2">
-                      Respuesta correcta: {exercise.correctAnswer}
-                    </p>
-                    <p className="text-blue-800 text-sm">
-                      {exercise.explanation}
-                    </p>
+                    <div className="font-medium text-blue-900 mb-2">
+                      Respuesta correcta:{" "}
+                      <ReactMarkdown
+                        components={{
+                          ...markdownComponents,
+                          p: ({ children }: any) => (
+                            <span className="inline">{children}</span>
+                          )
+                        }}
+                      >
+                        {exercise.correctAnswer}
+                      </ReactMarkdown>
+                    </div>
+                    <div className="text-blue-800 text-sm leading-relaxed">
+                      <ReactMarkdown
+                        components={{
+                          ...markdownComponents,
+                          p: ({ children }: any) => (
+                            <p className="mb-2 last:mb-0">{children}</p>
+                          )
+                        }}
+                      >
+                        {exercise.explanation}
+                      </ReactMarkdown>
+                    </div>
                   </div>
                 </details>
               </CardContent>
