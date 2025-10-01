@@ -234,13 +234,19 @@ export function CodeCompletionExercise({
             Completar código
           </Badge>
           {hasSubmitted && isCorrect && (
-            <Badge variant="default" className="text-xs bg-green-600">
+            <Badge
+              variant="default"
+              className="text-xs bg-green-600 text-white font-bold"
+            >
               <CheckCircle2 className="h-3 w-3 mr-1" />
               Correcto
             </Badge>
           )}
           {hasSubmitted && !isCorrect && (
-            <Badge variant="destructive" className="text-xs">
+            <Badge
+              variant="destructive"
+              className="text-xs text-white font-bold"
+            >
               <X className="h-3 w-3 mr-1" />
               Incorrecto
             </Badge>
