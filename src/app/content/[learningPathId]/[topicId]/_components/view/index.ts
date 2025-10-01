@@ -1,3 +1,5 @@
+export * from "./exercises";
+export * from "./markdown";
 export * from "./action-buttons";
 export * from "./exercise-section";
 export * from "./lesson-content";

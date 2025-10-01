@@ -11,6 +11,7 @@ import {
   CardTitle
 } from "@/components/ui/card";
 import type { Content } from "@/lib/database";
+import { markdownComponents } from "./markdown";
 
 type LessonContentProps = {
   lesson: Content;
@@ -177,27 +178,7 @@ export function LessonContent({ lesson }: LessonContentProps) {
                       {example.code}
                     </SyntaxHighlighter>
                     <div className="text-slate-600 mt-3 text-sm leading-relaxed">
-                      <ReactMarkdown
-                        components={{
-                          code: ({ children, ...props }: any) => (
-                            <code
-                              className="bg-slate-100 text-rose-600 px-1.5 py-0.5 rounded text-xs font-[monospace]"
-                              {...props}
-                            >
-                              {children}
-                            </code>
-                          ),
-                          p: ({ children }) => <>{children}</>,
-                          strong: ({ children }) => (
-                            <strong className="font-semibold text-slate-700">
-                              {children}
-                            </strong>
-                          ),
-                          em: ({ children }) => (
-                            <em className="italic">{children}</em>
-                          )
-                        }}
-                      >
+                      <ReactMarkdown components={markdownComponents}>
                         {example.explanation}
                       </ReactMarkdown>
                     </div>
