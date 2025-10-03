@@ -16,12 +16,14 @@ type MultipleChoiceExerciseProps = {
   exercise: TMultipleChoiceExercise;
   index: number;
   contentId: string;
+  onCompleted?: () => void;
 };
 
 export function MultipleChoiceExercise({
   exercise,
   index,
-  contentId
+  contentId,
+  onCompleted
 }: MultipleChoiceExerciseProps) {
   const { saveAnswer, loadSavedAnswer, isLoading } = useExerciseInteractions(contentId);
   const [selectedAnswer, setSelectedAnswer] = useState<string>("");
@@ -87,6 +89,11 @@ export function MultipleChoiceExercise({
         } else {
           // If correct, show answer immediately
           setShowAnswer(true);
+        }
+
+        // Call onCompleted callback if exercise is completed or max attempts reached
+        if (isAnswerCorrect || result.maxAttemptsReached) {
+          onCompleted?.();
         }
       }
     } finally {

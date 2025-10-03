@@ -1,5 +1,5 @@
 import { generateObject } from "ai";
-import { ollama } from "ollama-ai-provider-v2";
+import { google } from "../google";
 import {
   PlacementAnalysisSchema,
   LearningPathSchema,
@@ -7,7 +7,6 @@ import {
   type LearningPath,
   type PlacementTestData
 } from "../schemas";
-import { randomUUID } from "node:crypto";
 
 /**
  * Servicio simplificado de IA para JSensei
@@ -15,7 +14,7 @@ import { randomUUID } from "node:crypto";
  */
 export class PlacementTestAIService {
   // Modelo local configurado
-  private static readonly DEFAULT_MODEL = "codellama:7b";
+  private static readonly DEFAULT_MODEL = "gemini-2.5-flash";
 
   /**
    * Analiza los resultados de la prueba de nivelación y genera recomendaciones
@@ -27,7 +26,7 @@ export class PlacementTestAIService {
       const prompt = this.buildPlacementAnalysisPrompt(data);
 
       const result = await generateObject({
-        model: ollama(this.DEFAULT_MODEL),
+        model: google(this.DEFAULT_MODEL),
         schema: PlacementAnalysisSchema,
         prompt,
         temperature: 0.8
@@ -52,7 +51,7 @@ export class PlacementTestAIService {
       console.log("🤖 Generando plan de aprendizaje conciso con IA...");
 
       const result = await generateObject({
-        model: ollama(this.DEFAULT_MODEL),
+        model: google(this.DEFAULT_MODEL),
         schema: LearningPathSchema,
         prompt,
         temperature: 0.7

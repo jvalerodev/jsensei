@@ -166,16 +166,12 @@ export interface UserProgress {
   id: string;
   user_id: string;
   learning_path_id: string;
-  content_id?: string;
-  topic: string;
+  topic_id: string; // Replaces content_id
   status: ProgressStatus;
   score: number;
   attempts: number;
   time_spent: number;
-  current_difficulty: number;
   recent_scores: number[];
-  struggling_areas: string[];
-  mastered_concepts: string[];
   started_at?: string;
   completed_at?: string;
   last_interaction: string;
@@ -186,12 +182,14 @@ export interface UserProgress {
 export interface CreateUserProgressData {
   user_id: string;
   learning_path_id: string;
-  content_id?: string;
-  topic: string;
+  topic_id: string; // Replaces content_id (required)
   status?: ProgressStatus;
   score?: number;
   attempts?: number;
   time_spent?: number;
+  recent_scores?: number[];
+  started_at?: string;
+  completed_at?: string;
 }
 
 export interface UpdateUserProgressData {
@@ -199,10 +197,7 @@ export interface UpdateUserProgressData {
   score?: number;
   attempts?: number;
   time_spent?: number;
-  current_difficulty?: number;
   recent_scores?: number[];
-  struggling_areas?: string[];
-  mastered_concepts?: string[];
   started_at?: string;
   completed_at?: string;
   last_interaction?: string;

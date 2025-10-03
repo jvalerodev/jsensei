@@ -38,7 +38,7 @@ export class ContentModel extends BaseModel<
       order_index: contentData.order_index || 0,
       target_weak_areas: contentData.target_weak_areas || [],
       target_strong_areas: contentData.target_strong_areas || [],
-      is_generated_by_ai: false,
+      is_generated_by_ai: true,
       is_active: true,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()

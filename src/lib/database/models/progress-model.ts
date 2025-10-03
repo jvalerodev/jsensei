@@ -18,7 +18,7 @@ export class UserProgressModel extends BaseModel<UserProgress, CreateUserProgres
    * Create user progress with validation
    */
   async create(progressData: CreateUserProgressData): Promise<UserProgress> {
-    this.validateRequired(progressData, ['user_id', 'learning_path_id', 'topic']);
+    this.validateRequired(progressData, ['user_id', 'learning_path_id', 'topic_id']);
 
     const sanitizedData = this.sanitizeData({
       ...progressData,
@@ -26,10 +26,7 @@ export class UserProgressModel extends BaseModel<UserProgress, CreateUserProgres
       score: progressData.score || 0,
       attempts: progressData.attempts || 0,
       time_spent: progressData.time_spent || 0,
-      current_difficulty: 1.0,
-      recent_scores: [],
-      struggling_areas: [],
-      mastered_concepts: [],
+      recent_scores: progressData.recent_scores || [],
       last_interaction: new Date().toISOString(),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -64,7 +61,7 @@ export class UserProgressModel extends BaseModel<UserProgress, CreateUserProgres
         return this.create({
           user_id: userId,
           learning_path_id: learningPathId,
-          topic: topic,
+          topic_id: topic,
           ...updateData
         });
       }
@@ -76,14 +73,14 @@ export class UserProgressModel extends BaseModel<UserProgress, CreateUserProgres
   /**
    * Get user's progress for a specific topic in a learning path
    */
-  async findByUserAndTopic(userId: string, learningPathId: string, topic: string): Promise<UserProgress | null> {
+  async findByUserAndTopic(userId: string, learningPathId: string, topicId: string): Promise<UserProgress | null> {
     try {
       const { data, error } = await this.supabase
         .from(this.tableName)
         .select('*')
         .eq('user_id', userId)
         .eq('learning_path_id', learningPathId)
-        .eq('topic', topic)
+        .eq('topic_id', topicId)
         .single();
 
       if (error) {
@@ -184,7 +181,7 @@ export class UserProgressModel extends BaseModel<UserProgress, CreateUserProgres
         return this.create({
           user_id: userId,
           learning_path_id: learningPathId,
-          topic: topic,
+          topic_id: topic,
           time_spent: timeSpent,
           status: 'in_progress'
         });
@@ -395,10 +392,7 @@ export class UserProgressModel extends BaseModel<UserProgress, CreateUserProgres
           score: 0,
           attempts: 0,
           time_spent: 0,
-          current_difficulty: 1.0,
           recent_scores: [],
-          struggling_areas: [],
-          mastered_concepts: [],
           completed_at: undefined,
           last_interaction: new Date().toISOString()
         });

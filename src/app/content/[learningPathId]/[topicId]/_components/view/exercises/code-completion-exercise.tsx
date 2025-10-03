@@ -17,12 +17,14 @@ type CodeCompletionExerciseProps = {
   exercise: TCodeCompletionExercise;
   index: number;
   contentId: string;
+  onCompleted?: () => void;
 };
 
 export function CodeCompletionExercise({
   exercise,
   index,
-  contentId
+  contentId,
+  onCompleted
 }: CodeCompletionExerciseProps) {
   const { saveAnswer, loadSavedAnswer, isLoading } =
     useExerciseInteractions(contentId);
@@ -89,6 +91,11 @@ export function CodeCompletionExercise({
           setShowAnswer(result.maxAttemptsReached || false);
         } else {
           setShowAnswer(true);
+        }
+
+        // Call onCompleted callback if exercise is completed or max attempts reached
+        if (isAnswerCorrect || result.maxAttemptsReached) {
+          onCompleted?.();
         }
       }
     } finally {

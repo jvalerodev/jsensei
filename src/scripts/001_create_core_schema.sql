@@ -120,10 +120,7 @@ CREATE TABLE IF NOT EXISTS public.user_progress (
   time_spent INTEGER DEFAULT 0, -- en segundos
   
   -- Progreso adaptativo
-  current_difficulty REAL DEFAULT 1.0,
   recent_scores INTEGER[] DEFAULT '{}', -- Últimos 5 scores
-  struggling_areas TEXT[] DEFAULT '{}',
-  mastered_concepts TEXT[] DEFAULT '{}',
   
   -- Timestamps
   started_at TIMESTAMP WITH TIME ZONE,

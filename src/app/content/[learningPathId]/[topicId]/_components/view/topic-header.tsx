@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen } from "lucide-react";
 
@@ -13,15 +13,27 @@ type TopicHeaderProps = {
   };
   learningPathTitle: string;
   onBackToDashboard: () => void;
+  isCompleted?: boolean;
 };
 
 export function TopicHeader({
   topic,
   learningPathTitle,
-  onBackToDashboard
+  onBackToDashboard,
+  isCompleted = false
 }: TopicHeaderProps) {
   return (
     <>
+      {isCompleted && (
+        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
+          <CheckCircle2 className="h-5 w-5 text-green-600" />
+          <div>
+            <p className="text-green-800 font-semibold">Topic Completado</p>
+            <p className="text-green-700 text-sm">Has completado todos los ejercicios de este módulo</p>
+          </div>
+        </div>
+      )}
+      
       <div className="flex items-center gap-4 mb-6">
         <Button
           variant="ghost"

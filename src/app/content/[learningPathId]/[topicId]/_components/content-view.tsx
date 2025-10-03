@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useTopicContent } from "@/hooks/use-topic-content";
+import { useTopicProgress } from "@/hooks/use-topic-progress";
 import { useToast } from "@/hooks/use-toast";
 import {
   TopicHeader,
@@ -42,9 +43,11 @@ export function TopicContentView({
 }: TopicContentViewProps) {
   const router = useRouter();
   const { generateTopicContent, isLoading } = useTopicContent();
+  const { saveProgress, checkProgress } = useTopicProgress();
   const { toast } = useToast();
   const [topicData, setTopicData] = useState<TopicContentData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [progressSaved, setProgressSaved] = useState(false);
 
   useEffect(() => {
     const loadTopicContent = async () => {
@@ -58,6 +61,12 @@ export function TopicContentView({
               description: `Se ha generado el contenido para "${result.topic.title}"`
             });
           }
+
+          // Check if progress already exists
+          const { progress } = await checkProgress({ learningPathId, topicId });
+          if (progress) {
+            setProgressSaved(true);
+          }
         } else {
           setError("No se pudo cargar el contenido del topic");
         }
@@ -68,18 +77,41 @@ export function TopicContentView({
     };
 
     loadTopicContent();
-  }, [learningPathId, topicId, generateTopicContent, toast]);
+  }, [learningPathId, topicId, generateTopicContent, checkProgress, toast]);
+
+  /**
+   * Check if all exercises are completed and save progress
+   * This is called when exercises state changes
+   */
+  const handleExercisesCompleted = useCallback(async () => {
+    if (progressSaved) {
+      console.log("[TopicContentView] Progress already saved, skipping");
+      return;
+    }
+
+    console.log("[TopicContentView] Checking if all exercises are completed");
+
+    const { allExercisesCompleted } = await checkProgress({
+      learningPathId,
+      topicId
+    });
+
+    if (allExercisesCompleted) {
+      console.log("[TopicContentView] All exercises completed, saving progress");
+      
+      const progress = await saveProgress({
+        learningPathId,
+        topicId
+      });
+
+      if (progress) {
+        setProgressSaved(true);
+      }
+    }
+  }, [learningPathId, topicId, saveProgress, checkProgress, progressSaved]);
 
   const handleBackToDashboard = () => {
     router.push("/dashboard");
-  };
-
-  const handleMarkAsCompleted = () => {
-    // TODO: Implementar funcionalidad para marcar como completado
-    toast({
-      title: "Funcionalidad pendiente",
-      description: "Esta funcionalidad será implementada próximamente"
-    });
   };
 
   if (isLoading) {
@@ -126,17 +158,20 @@ export function TopicContentView({
         topic={topic}
         learningPathTitle={learningPath.title}
         onBackToDashboard={handleBackToDashboard}
+        isCompleted={progressSaved}
       />
 
       {lesson && <LessonContent lesson={lesson} />}
 
       {exercises.length > 0 && (
-        <ExerciseSection exercises={exercises} />
+        <ExerciseSection 
+          exercises={exercises}
+          onExerciseCompleted={handleExercisesCompleted}
+        />
       )}
 
       <ActionButtons
         onBackToDashboard={handleBackToDashboard}
-        onMarkAsCompleted={handleMarkAsCompleted}
       />
     </div>
   );

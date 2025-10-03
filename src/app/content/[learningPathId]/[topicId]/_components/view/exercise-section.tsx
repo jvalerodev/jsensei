@@ -16,9 +16,10 @@ import {
 
 type ExerciseSectionProps = {
   exercises: (Exercise & { contentId: string })[];
+  onExerciseCompleted?: () => void;
 };
 
-export function ExerciseSection({ exercises }: ExerciseSectionProps) {
+export function ExerciseSection({ exercises, onExerciseCompleted }: ExerciseSectionProps) {
 
   return (
     <Card className="mb-6">
@@ -44,6 +45,7 @@ export function ExerciseSection({ exercises }: ExerciseSectionProps) {
                     exercise={exercise as any}
                     index={index}
                     contentId={exercise.contentId}
+                    onCompleted={onExerciseCompleted}
                   />
                 );
 
@@ -54,6 +56,7 @@ export function ExerciseSection({ exercises }: ExerciseSectionProps) {
                     exercise={exercise as any}
                     index={index}
                     contentId={exercise.contentId}
+                    onCompleted={onExerciseCompleted}
                   />
                 );
 
