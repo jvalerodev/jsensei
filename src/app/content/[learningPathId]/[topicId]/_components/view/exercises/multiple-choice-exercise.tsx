@@ -29,6 +29,11 @@ export function MultipleChoiceExercise({
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingAnswer, setIsLoadingAnswer] = useState(true);
+  const [attemptNumber, setAttemptNumber] = useState(0);
+  const [maxAttemptsReached, setMaxAttemptsReached] = useState(false);
+  const [aiFeedback, setAiFeedback] = useState<string | undefined>();
+  const [aiSuggestions, setAiSuggestions] = useState<string[] | undefined>();
+  const [isCompleted, setIsCompleted] = useState(false);
 
   // Load saved answer on mount
   useEffect(() => {
@@ -38,7 +43,13 @@ export function MultipleChoiceExercise({
       if (savedAnswer) {
         setSelectedAnswer(savedAnswer.userAnswer);
         setHasSubmitted(true);
-        setShowAnswer(true);
+        setAttemptNumber(savedAnswer.attemptNumber);
+        setMaxAttemptsReached(savedAnswer.maxAttemptsReached);
+        setIsCompleted(savedAnswer.isCompleted);
+        setAiFeedback(savedAnswer.aiFeedback);
+        setAiSuggestions(savedAnswer.aiSuggestions);
+        // Show answer only if completed or max attempts reached
+        setShowAnswer(savedAnswer.isCompleted || savedAnswer.maxAttemptsReached);
       }
       setIsLoadingAnswer(false);
     };
@@ -53,27 +64,42 @@ export function MultipleChoiceExercise({
 
     setIsSaving(true);
     try {
-      const success = await saveAnswer(
+      const result = await saveAnswer(
         exercise.id,
         selectedAnswer,
         exercise.correctAnswer,
         isAnswerCorrect,
-        "multiple-choice"
+        "multiple-choice",
+        exercise.question // Send question for AI feedback
       );
 
-      if (success) {
+      if (result.success) {
         setHasSubmitted(true);
-        setShowAnswer(true);
+        setAttemptNumber(result.attemptNumber || 1);
+        setMaxAttemptsReached(result.maxAttemptsReached || false);
+        setIsCompleted(isAnswerCorrect);
+        
+        // Set AI feedback if incorrect
+        if (!isAnswerCorrect) {
+          setAiFeedback(result.aiFeedback);
+          setAiSuggestions(result.aiSuggestions);
+          setShowAnswer(result.maxAttemptsReached || false);
+        } else {
+          // If correct, show answer immediately
+          setShowAnswer(true);
+        }
       }
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleReset = () => {
+  const handleRetry = () => {
     setSelectedAnswer("");
     setHasSubmitted(false);
-    setShowAnswer(false);
+    setAiFeedback(undefined);
+    setAiSuggestions(undefined);
+    // Don't reset showAnswer if max attempts reached
   };
 
   const isCorrect = hasSubmitted && selectedAnswer === exercise.correctAnswer;
@@ -122,7 +148,7 @@ export function MultipleChoiceExercise({
         <RadioGroup
           value={selectedAnswer}
           onValueChange={setSelectedAnswer}
-          disabled={hasSubmitted}
+          disabled={isCompleted || maxAttemptsReached}
           className="space-y-3 mb-4"
         >
           {exercise.options.map((option, optIndex) => {
@@ -134,9 +160,9 @@ export function MultipleChoiceExercise({
               <div
                 key={optIndex}
                 className={`flex items-start gap-3 p-3 rounded-lg border-2 transition-colors ${
-                  hasSubmitted && isThisCorrect
+                  showAnswer && isThisCorrect
                     ? "border-green-500 bg-green-50"
-                    : hasSubmitted && isThisSelected && !isThisCorrect
+                    : showAnswer && isThisSelected && !isThisCorrect
                     ? "border-red-500 bg-red-50"
                     : isThisSelected
                     ? "border-orange-500 bg-orange-50"
@@ -161,10 +187,10 @@ export function MultipleChoiceExercise({
                         {option}
                       </ReactMarkdown>
                     </div>
-                    {hasSubmitted && isThisCorrect && (
+                    {showAnswer && isThisCorrect && (
                       <Check className="h-5 w-5 text-green-600 flex-shrink-0" />
                     )}
-                    {hasSubmitted && isThisSelected && !isThisCorrect && (
+                    {showAnswer && isThisSelected && !isThisCorrect && (
                       <X className="h-5 w-5 text-red-600 flex-shrink-0" />
                     )}
                   </div>
@@ -175,21 +201,66 @@ export function MultipleChoiceExercise({
         </RadioGroup>
 
         {/* Action Buttons */}
-        <div className="flex justify-end gap-2 mb-4">
-          {!hasSubmitted ? (
-            <Button
-              onClick={handleSubmit}
-              disabled={!selectedAnswer || isSaving}
-              className="bg-orange-600 hover:bg-orange-700 cursor-pointer"
-            >
-              {isSaving ? "Guardando..." : "Verificar Respuesta"}
-            </Button>
-          ) : (
-            <Button onClick={handleReset} variant="outline" disabled>
-              Respuesta Guardada
-            </Button>
-          )}
+        <div className="flex justify-between items-center gap-2 mb-4">
+          <div className="text-sm text-slate-600">
+            {attemptNumber > 0 && (
+              <span>
+                Intento {attemptNumber} de 3
+              </span>
+            )}
+          </div>
+          <div className="flex gap-2">
+            {!hasSubmitted ? (
+              <Button
+                onClick={handleSubmit}
+                disabled={!selectedAnswer || isSaving || isCompleted}
+                className="bg-orange-600 hover:bg-orange-700 cursor-pointer"
+              >
+                {isSaving ? "Guardando..." : "Verificar Respuesta"}
+              </Button>
+            ) : isCompleted ? (
+              <Button variant="outline" disabled>
+                ✓ Completado
+              </Button>
+            ) : maxAttemptsReached ? (
+              <Button variant="outline" disabled>
+                Máximo de intentos alcanzado
+              </Button>
+            ) : (
+              <Button 
+                onClick={handleRetry} 
+                variant="outline"
+                className="cursor-pointer"
+              >
+                Intentar de nuevo
+              </Button>
+            )}
+          </div>
         </div>
+
+        {/* AI Feedback (shown after incorrect answer, before max attempts) */}
+        {hasSubmitted && !isCorrect && !maxAttemptsReached && aiFeedback && (
+          <div className="p-4 rounded-lg bg-amber-50 border border-amber-200 mb-4">
+            <div className="font-medium text-amber-900 mb-2 flex items-center gap-2">
+              💡 Feedback
+            </div>
+            <div className="text-amber-800 text-sm leading-relaxed mb-3">
+              {aiFeedback}
+            </div>
+            {aiSuggestions && aiSuggestions.length > 0 && (
+              <div className="mt-3">
+                <div className="font-medium text-amber-900 text-sm mb-2">
+                  Pistas:
+                </div>
+                <ul className="list-disc list-inside space-y-1 text-sm text-amber-800">
+                  {aiSuggestions.map((hint, idx) => (
+                    <li key={idx}>{hint}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Explanation (shown after submission) */}
         {showAnswer && (

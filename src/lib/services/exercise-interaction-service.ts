@@ -1,12 +1,16 @@
 import { createServerDatabase } from "@/lib/database/server";
+import { ExerciseFeedbackAIService } from "@/lib/ai/exercise-feedback-ai-service";
+import type { UserInteraction } from "@/lib/database/types";
+
+const MAX_ATTEMPTS = 3;
 
 /**
  * Service for managing exercise interactions
- * Handles saving and retrieving user answers for all exercise types
+ * Handles saving and retrieving user answers with AI feedback for multiple attempts
  */
 export class ExerciseInteractionService {
   /**
-   * Save user's exercise answer
+   * Save user's exercise answer with AI feedback support
    */
   static async saveExerciseAnswer(
     userId: string,
@@ -15,24 +19,100 @@ export class ExerciseInteractionService {
     userAnswer: string,
     correctAnswer: string,
     isCorrect: boolean,
-    exerciseType: string
-  ): Promise<void> {
+    exerciseType: string,
+    exerciseQuestion?: string,
+    userSkillLevel?: "beginner" | "intermediate"
+  ): Promise<{
+    success: boolean;
+    attemptNumber: number;
+    maxAttemptsReached: boolean;
+    aiFeedback?: string;
+    aiSuggestions?: string[];
+    relatedConcepts?: string[];
+  }> {
     const db = await createServerDatabase();
 
-    // Save the answer - each content item is a separate exercise
-    // so we only store the user's answer as a simple string
+    // Get current attempt count
+    const attemptCount = await db.userInteractions.getExerciseAttemptCount(
+      userId,
+      contentId
+    );
+    const attemptNumber = attemptCount + 1;
+
+    // Check if already completed
+    const isCompleted = await db.userInteractions.isExerciseCompleted(
+      userId,
+      contentId
+    );
+
+    if (isCompleted) {
+      // Exercise already completed correctly, don't allow more attempts
+      return {
+        success: false,
+        attemptNumber: attemptCount,
+        maxAttemptsReached: true
+      };
+    }
+
+    // Check if max attempts reached
+    if (attemptCount >= MAX_ATTEMPTS) {
+      return {
+        success: false,
+        attemptNumber: attemptCount,
+        maxAttemptsReached: true
+      };
+    }
+
+    let aiFeedback: string | undefined;
+    let aiSuggestions: string[] | undefined;
+    let relatedConcepts: string[] | undefined;
+
+    // Generate AI feedback only for first and second attempts (not third)
+    if (!isCorrect && exerciseQuestion && attemptNumber < MAX_ATTEMPTS) {
+      try {
+        const feedback = await ExerciseFeedbackAIService.generateFeedback(
+          exerciseQuestion,
+          exerciseType,
+          userAnswer,
+          correctAnswer,
+          attemptNumber,
+          userSkillLevel || "beginner"
+        );
+
+        aiFeedback = feedback.feedback;
+        aiSuggestions = feedback.hints;
+        relatedConcepts = feedback.relatedConcepts;
+      } catch (error) {
+        console.error("[ExerciseInteractionService] Error generating feedback:", error);
+        // Continue without feedback rather than failing
+      }
+    }
+
+    // Save the interaction (no aiExplanation, will use exercise.explanation instead)
     await db.userInteractions.recordExerciseAnswer(
       userId,
       contentId,
-      userAnswer, // Store only the user's answer
+      userAnswer,
       correctAnswer,
       isCorrect,
-      isCorrect ? 100 : 0 // Simple scoring: 100 for correct, 0 for incorrect
+      isCorrect ? 100 : 0,
+      aiFeedback,
+      aiSuggestions,
+      undefined // No AI explanation, use exercise.explanation instead
     );
+
+    return {
+      success: true,
+      attemptNumber,
+      maxAttemptsReached: attemptNumber >= MAX_ATTEMPTS,
+      aiFeedback,
+      aiSuggestions,
+      relatedConcepts
+    };
   }
 
   /**
-   * Get user's previous answer for a specific exercise
+   * Get user's exercise status including all attempts
    */
   static async getExerciseAnswer(
     userId: string,
@@ -42,38 +122,48 @@ export class ExerciseInteractionService {
     userAnswer: string;
     isCorrect: boolean;
     timestamp: string;
+    attemptNumber: number;
+    maxAttemptsReached: boolean;
+    isCompleted: boolean;
+    aiFeedback?: string;
+    aiSuggestions?: string[];
+    aiExplanation?: string;
+    allAttempts?: UserInteraction[];
   } | null> {
     const db = await createServerDatabase();
 
-    // Get the latest interaction for this content
-    // Since each exercise is a separate content item, we just need the latest one
-    const { data: interactions } = await db.userInteractions.findAll(
-      {
-        user_id: userId,
-        content_id: contentId,
-        interaction_type: "exercise_answer"
-      },
-      {
-        orderBy: "created_at",
-        orderDirection: "desc",
-        limit: 1
-      }
+    // Get all attempts
+    const attempts = await db.userInteractions.getExerciseAttempts(
+      userId,
+      contentId
     );
 
-    if (!interactions || interactions.length === 0) {
+    if (attempts.length === 0) {
       return null;
     }
 
-    const interaction = interactions[0];
+    // Get latest attempt
+    const latestAttempt = attempts[attempts.length - 1];
+    
+    // Check if completed (any correct answer)
+    const isCompleted = attempts.some(attempt => attempt.is_correct === true);
+
     return {
-      userAnswer: interaction.user_answer || "",
-      isCorrect: interaction.is_correct || false,
-      timestamp: interaction.created_at
+      userAnswer: latestAttempt.user_answer || "",
+      isCorrect: latestAttempt.is_correct || false,
+      timestamp: latestAttempt.created_at,
+      attemptNumber: attempts.length,
+      maxAttemptsReached: attempts.length >= MAX_ATTEMPTS,
+      isCompleted,
+      aiFeedback: latestAttempt.ai_feedback || undefined,
+      aiSuggestions: latestAttempt.ai_suggestions || undefined,
+      aiExplanation: latestAttempt.ai_explanation || undefined,
+      allAttempts: attempts
     };
   }
 
   /**
-   * Get all exercise answers for a content
+   * Get all exercise answers for a content (compatibility method)
    */
   static async getAllExerciseAnswers(
     userId: string,
@@ -86,39 +176,27 @@ export class ExerciseInteractionService {
         userAnswer: string;
         isCorrect: boolean;
         timestamp: string;
+        attemptNumber: number;
+        maxAttemptsReached: boolean;
+        isCompleted: boolean;
       }
     >
   > {
-    const db = await createServerDatabase();
+    const exerciseData = await this.getExerciseAnswer(userId, contentId, exerciseId);
 
-    // Since each exercise is a separate content item, this method
-    // isn't really needed anymore, but we keep it for compatibility
-    // It will just return the answer for this specific content
-    const { data: interactions } = await db.userInteractions.findAll(
-      {
-        user_id: userId,
-        content_id: contentId,
-        interaction_type: "exercise_answer"
-      },
-      {
-        orderBy: "created_at",
-        orderDirection: "desc",
-        limit: 1
-      }
-    );
-
-    if (!interactions || interactions.length === 0) {
+    if (!exerciseData) {
       return {};
     }
-
-    const interaction = interactions[0];
 
     // Return using exerciseId as key for compatibility
     return {
       [exerciseId]: {
-        userAnswer: interaction.user_answer || "",
-        isCorrect: interaction.is_correct || false,
-        timestamp: interaction.created_at
+        userAnswer: exerciseData.userAnswer,
+        isCorrect: exerciseData.isCorrect,
+        timestamp: exerciseData.timestamp,
+        attemptNumber: exerciseData.attemptNumber,
+        maxAttemptsReached: exerciseData.maxAttemptsReached,
+        isCompleted: exerciseData.isCompleted
       }
     };
   }

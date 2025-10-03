@@ -327,6 +327,77 @@ export class UserInteractionModel extends BaseModel<UserInteraction, CreateUserI
   }
 
   /**
+   * Get all attempts for a specific exercise
+   */
+  async getExerciseAttempts(
+    userId: string,
+    contentId: string
+  ): Promise<UserInteraction[]> {
+    try {
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .select('*')
+        .eq('user_id', userId)
+        .eq('content_id', contentId)
+        .eq('interaction_type', 'exercise_answer')
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        throw this.handleError(error);
+      }
+
+      return (data || []) as UserInteraction[];
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Get attempt count for a specific exercise
+   */
+  async getExerciseAttemptCount(
+    userId: string,
+    contentId: string
+  ): Promise<number> {
+    try {
+      const attempts = await this.getExerciseAttempts(userId, contentId);
+      return attempts.length;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Check if exercise has been answered correctly
+   */
+  async isExerciseCompleted(
+    userId: string,
+    contentId: string
+  ): Promise<boolean> {
+    try {
+      const attempts = await this.getExerciseAttempts(userId, contentId);
+      return attempts.some(attempt => attempt.is_correct === true);
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Get latest attempt for an exercise
+   */
+  async getLatestExerciseAttempt(
+    userId: string,
+    contentId: string
+  ): Promise<UserInteraction | null> {
+    try {
+      const attempts = await this.getExerciseAttempts(userId, contentId);
+      return attempts.length > 0 ? attempts[attempts.length - 1] : null;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
    * Get interaction analytics for admin
    */
   async getInteractionAnalytics(

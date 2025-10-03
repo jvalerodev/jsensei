@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { ExerciseInteractionService } from "@/lib/services/exercise-interaction-service";
+import { getDatabase } from "@/lib/database/server";
 
-// POST - Save exercise answer
+// POST - Save exercise answer with AI feedback
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createServerClient();
@@ -19,7 +20,15 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { contentId, exerciseId, userAnswer, correctAnswer, isCorrect, exerciseType } = body;
+    const { 
+      contentId, 
+      exerciseId, 
+      userAnswer, 
+      correctAnswer, 
+      isCorrect, 
+      exerciseType,
+      exerciseQuestion 
+    } = body;
 
     // Validation
     if (!contentId || !exerciseId || userAnswer === undefined || correctAnswer === undefined || isCorrect === undefined) {
@@ -29,20 +38,44 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Save the interaction
-    await ExerciseInteractionService.saveExerciseAnswer(
+    // Get user skill level for personalized feedback
+    const db = await getDatabase();
+    const userData = await db.users.findById(user.id);
+    const userSkillLevel = userData?.skill_level || "beginner";
+
+    // Save the interaction with AI feedback
+    const result = await ExerciseInteractionService.saveExerciseAnswer(
       user.id,
       contentId,
       exerciseId,
       userAnswer,
       correctAnswer,
       isCorrect,
-      exerciseType || 'unknown'
+      exerciseType || 'unknown',
+      exerciseQuestion,
+      userSkillLevel
     );
+
+    if (!result.success) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: "No se puede registrar más intentos",
+          maxAttemptsReached: result.maxAttemptsReached,
+          attemptNumber: result.attemptNumber
+        },
+        { status: 400 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      message: "Respuesta guardada exitosamente"
+      message: "Respuesta guardada exitosamente",
+      attemptNumber: result.attemptNumber,
+      maxAttemptsReached: result.maxAttemptsReached,
+      aiFeedback: result.aiFeedback,
+      aiSuggestions: result.aiSuggestions,
+      relatedConcepts: result.relatedConcepts
     });
   } catch (error) {
     console.error("[API] Error saving exercise answer:", error);

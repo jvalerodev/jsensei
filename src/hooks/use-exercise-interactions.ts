@@ -5,6 +5,11 @@ export type SavedExerciseAnswer = {
   userAnswer: string;
   isCorrect: boolean;
   timestamp: string;
+  attemptNumber: number;
+  maxAttemptsReached: boolean;
+  isCompleted: boolean;
+  aiFeedback?: string;
+  aiSuggestions?: string[];
 };
 
 export type ExerciseAnswersMap = Record<string, SavedExerciseAnswer>;
@@ -22,15 +27,23 @@ export function useExerciseInteractions(contentId: string) {
     setIsLoading(false);
   }, [contentId]);
 
-  // Save exercise answer
+  // Save exercise answer with AI feedback support
   const saveAnswer = useCallback(
     async (
       exerciseId: string,
       userAnswer: string,
       correctAnswer: string,
       isCorrect: boolean,
-      exerciseType: string
-    ): Promise<boolean> => {
+      exerciseType: string,
+      exerciseQuestion?: string
+    ): Promise<{
+      success: boolean;
+      attemptNumber?: number;
+      maxAttemptsReached?: boolean;
+      aiFeedback?: string;
+      aiSuggestions?: string[];
+      relatedConcepts?: string[];
+    }> => {
       try {
         const response = await fetch("/api/exercises/interactions", {
           method: "POST",
@@ -43,32 +56,61 @@ export function useExerciseInteractions(contentId: string) {
             userAnswer,
             correctAnswer,
             isCorrect,
-            exerciseType
+            exerciseType,
+            exerciseQuestion
           })
         });
 
-        if (!response.ok) {
-          throw new Error("Error al guardar respuesta");
-        }
-
         const result = await response.json();
+
+        if (!response.ok) {
+          // Handle max attempts reached
+          if (result.maxAttemptsReached) {
+            toast({
+              title: "Máximo de intentos alcanzado",
+              description:
+                "Ya has usado todos tus intentos para este ejercicio.",
+              variant: "destructive"
+            });
+          }
+          return {
+            success: false,
+            maxAttemptsReached: result.maxAttemptsReached,
+            attemptNumber: result.attemptNumber
+          };
+        }
 
         if (result.success) {
           // Update local state
-          setSavedAnswers(prev => ({
+          setSavedAnswers((prev) => ({
             ...prev,
             [exerciseId]: {
               userAnswer,
               isCorrect,
-              timestamp: new Date().toISOString()
+              timestamp: new Date().toISOString(),
+              attemptNumber: result.attemptNumber,
+              maxAttemptsReached: result.maxAttemptsReached,
+              isCompleted: isCorrect,
+              aiFeedback: result.aiFeedback,
+              aiSuggestions: result.aiSuggestions
             }
           }));
 
-          console.log(`[useExerciseInteractions] Saved answer for ${exerciseId}`);
-          return true;
+          console.log(
+            `[useExerciseInteractions] Saved answer for ${exerciseId} (Attempt ${result.attemptNumber})`
+          );
+
+          return {
+            success: true,
+            attemptNumber: result.attemptNumber,
+            maxAttemptsReached: result.maxAttemptsReached,
+            aiFeedback: result.aiFeedback,
+            aiSuggestions: result.aiSuggestions,
+            relatedConcepts: result.relatedConcepts
+          };
         }
 
-        return false;
+        return { success: false };
       } catch (error) {
         console.error("[useExerciseInteractions] Error saving answer:", error);
         toast({
@@ -76,7 +118,7 @@ export function useExerciseInteractions(contentId: string) {
           description: "No se pudo guardar tu respuesta. Intenta de nuevo.",
           variant: "destructive"
         });
-        return false;
+        return { success: false };
       }
     },
     [contentId, toast]
@@ -100,11 +142,11 @@ export function useExerciseInteractions(contentId: string) {
         }
 
         const result = await response.json();
-        
+
         if (result.success && result.data && result.data[exerciseId]) {
           const answer = result.data[exerciseId];
           // Cache the answer
-          setSavedAnswers(prev => ({
+          setSavedAnswers((prev) => ({
             ...prev,
             [exerciseId]: answer
           }));

@@ -110,7 +110,7 @@ CREATE TABLE IF NOT EXISTS public.user_progress (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   learning_path_id UUID NOT NULL REFERENCES public.learning_paths(id) ON DELETE CASCADE,
-  content_id UUID REFERENCES public.contents(id) ON DELETE CASCADE,
+  topic_id UUID,
   
   status TEXT CHECK (status IN ('not_started', 'in_progress', 'completed', 'mastered')) DEFAULT 'not_started',
   
@@ -132,7 +132,7 @@ CREATE TABLE IF NOT EXISTS public.user_progress (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   
-  UNIQUE(user_id, learning_path_id, content_id)
+  UNIQUE(user_id, learning_path_id, topic_id)
 );
 
 -- ========================================
@@ -198,7 +198,6 @@ CREATE INDEX IF NOT EXISTS idx_contents_active ON public.contents(is_active);
 -- User Progress
 CREATE INDEX IF NOT EXISTS idx_user_progress_user_id ON public.user_progress(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_progress_learning_path ON public.user_progress(learning_path_id);
-CREATE INDEX IF NOT EXISTS idx_user_progress_content ON public.user_progress(content_id);
 CREATE INDEX IF NOT EXISTS idx_user_progress_status ON public.user_progress(status);
 CREATE INDEX IF NOT EXISTS idx_user_progress_last_interaction ON public.user_progress(last_interaction);
 
