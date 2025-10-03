@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { Check, X, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,24 +10,63 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { markdownComponents, blockMarkdownComponents } from "../markdown";
 import type { TMultipleChoiceExercise } from "./exercise-types";
+import { useExerciseInteractions } from "@/hooks/use-exercise-interactions";
 
 type MultipleChoiceExerciseProps = {
   exercise: TMultipleChoiceExercise;
   index: number;
+  contentId: string;
 };
 
 export function MultipleChoiceExercise({
   exercise,
-  index
+  index,
+  contentId
 }: MultipleChoiceExerciseProps) {
+  const { saveAnswer, loadSavedAnswer, isLoading } = useExerciseInteractions(contentId);
   const [selectedAnswer, setSelectedAnswer] = useState<string>("");
   const [showAnswer, setShowAnswer] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingAnswer, setIsLoadingAnswer] = useState(true);
 
-  const handleSubmit = () => {
-    if (selectedAnswer) {
-      setHasSubmitted(true);
-      setShowAnswer(true);
+  // Load saved answer on mount
+  useEffect(() => {
+    const loadAnswer = async () => {
+      setIsLoadingAnswer(true);
+      const savedAnswer = await loadSavedAnswer(exercise.id);
+      if (savedAnswer) {
+        setSelectedAnswer(savedAnswer.userAnswer);
+        setHasSubmitted(true);
+        setShowAnswer(true);
+      }
+      setIsLoadingAnswer(false);
+    };
+
+    loadAnswer();
+  }, [exercise.id, loadSavedAnswer]);
+
+  const handleSubmit = async () => {
+    if (!selectedAnswer) return;
+
+    const isAnswerCorrect = selectedAnswer === exercise.correctAnswer;
+
+    setIsSaving(true);
+    try {
+      const success = await saveAnswer(
+        exercise.id,
+        selectedAnswer,
+        exercise.correctAnswer,
+        isAnswerCorrect,
+        "multiple-choice"
+      );
+
+      if (success) {
+        setHasSubmitted(true);
+        setShowAnswer(true);
+      }
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -140,14 +179,14 @@ export function MultipleChoiceExercise({
           {!hasSubmitted ? (
             <Button
               onClick={handleSubmit}
-              disabled={!selectedAnswer}
-              className="bg-orange-600 hover:bg-orange-700"
+              disabled={!selectedAnswer || isSaving}
+              className="bg-orange-600 hover:bg-orange-700 cursor-pointer"
             >
-              Verificar Respuesta
+              {isSaving ? "Guardando..." : "Verificar Respuesta"}
             </Button>
           ) : (
-            <Button onClick={handleReset} variant="outline">
-              Intentar de Nuevo
+            <Button onClick={handleReset} variant="outline" disabled>
+              Respuesta Guardada
             </Button>
           )}
         </div>

@@ -97,15 +97,19 @@ export function TopicContentView({
   const { topic, learningPath, content } = topicData;
   const lesson = content.find((c) => c.content_type === "lesson");
 
-  // Filter ALL exercises and extract their content, sorted by order_index
-  const exercises = content
+  // Get exercise content items and map with their contentIds
+  const exerciseContentItems = content
     .filter((c) => c.content_type === "exercise")
-    .sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
+    .sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+
+  // Extract exercise data with contentId mapping
+  const exercises = exerciseContentItems
     .map((exerciseItem) => {
       // Extract the exercise data from the content field
       const exerciseContent = exerciseItem.content as any;
       return {
         id: exerciseContent.id || exerciseItem.id,
+        contentId: exerciseItem.id, // Store the content_id for this exercise
         question: exerciseContent.question,
         type: exerciseContent.type,
         options: exerciseContent.options || [],
@@ -126,7 +130,9 @@ export function TopicContentView({
 
       {lesson && <LessonContent lesson={lesson} />}
 
-      {exercises.length > 0 && <ExerciseSection exercises={exercises} />}
+      {exercises.length > 0 && (
+        <ExerciseSection exercises={exercises} />
+      )}
 
       <ActionButtons
         onBackToDashboard={handleBackToDashboard}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { Code, CheckCircle2, X } from "lucide-react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -11,24 +11,66 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { markdownComponents, blockMarkdownComponents } from "../markdown";
 import type { TCodeCompletionExercise } from "./exercise-types";
+import { useExerciseInteractions } from "@/hooks/use-exercise-interactions";
 
 type CodeCompletionExerciseProps = {
   exercise: TCodeCompletionExercise;
   index: number;
+  contentId: string;
 };
 
 export function CodeCompletionExercise({
   exercise,
-  index
+  index,
+  contentId
 }: CodeCompletionExerciseProps) {
+  const { saveAnswer, loadSavedAnswer, isLoading } =
+    useExerciseInteractions(contentId);
   const [userCode, setUserCode] = useState<string>("");
   const [showAnswer, setShowAnswer] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingAnswer, setIsLoadingAnswer] = useState(true);
 
-  const handleSubmit = () => {
-    if (userCode.trim()) {
-      setHasSubmitted(true);
-      setShowAnswer(true);
+  // Load saved answer on mount
+  useEffect(() => {
+    const loadAnswer = async () => {
+      setIsLoadingAnswer(true);
+      const savedAnswer = await loadSavedAnswer(exercise.id);
+      if (savedAnswer) {
+        setUserCode(savedAnswer.userAnswer);
+        setHasSubmitted(true);
+        setShowAnswer(true);
+      }
+      setIsLoadingAnswer(false);
+    };
+
+    loadAnswer();
+  }, [exercise.id, loadSavedAnswer]);
+
+  const handleSubmit = async () => {
+    if (!userCode.trim()) return;
+
+    const isAnswerCorrect =
+      userCode.trim().toLowerCase() ===
+      exercise.correctAnswer.trim().toLowerCase();
+
+    setIsSaving(true);
+    try {
+      const success = await saveAnswer(
+        exercise.id,
+        userCode,
+        exercise.correctAnswer,
+        isAnswerCorrect,
+        "code-completion"
+      );
+
+      if (success) {
+        setHasSubmitted(true);
+        setShowAnswer(true);
+      }
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -202,7 +244,7 @@ export function CodeCompletionExercise({
                         type="text"
                         value={userCode}
                         onChange={(e) => setUserCode(e.target.value)}
-                        className="inline-block w-auto min-w-[8rem] max-w-xs h-7 px-2 py-1 text-sm bg-white border-2 border-blue-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-200"
+                        className="inline-block w-auto min-w-[8rem] max-w-xs h-7 px-2 py-1 text-sm bg-white border-1 border-blue-400 focus:border-blue-600 focus:ring-1 focus:ring-blue-200"
                         placeholder="..."
                         disabled={hasSubmitted}
                         style={{
@@ -280,14 +322,14 @@ export function CodeCompletionExercise({
           {!hasSubmitted ? (
             <Button
               onClick={handleSubmit}
-              disabled={!userCode.trim()}
-              className="bg-blue-600 hover:bg-blue-700"
+              disabled={!userCode.trim() || isSaving}
+              className="bg-blue-600 hover:bg-blue-700 cursor-pointer"
             >
-              Verificar Código
+              {isSaving ? "Guardando..." : "Verificar Código"}
             </Button>
           ) : (
-            <Button onClick={handleReset} variant="outline">
-              Intentar de Nuevo
+            <Button onClick={handleReset} variant="outline" disabled>
+              Respuesta Guardada
             </Button>
           )}
         </div>

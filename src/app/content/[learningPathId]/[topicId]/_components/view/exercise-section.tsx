@@ -1,3 +1,5 @@
+"use client";
+
 import { Play } from "lucide-react";
 import {
   Card,
@@ -13,10 +15,11 @@ import {
 } from "./exercises";
 
 type ExerciseSectionProps = {
-  exercises: Exercise[];
+  exercises: (Exercise & { contentId: string })[];
 };
 
 export function ExerciseSection({ exercises }: ExerciseSectionProps) {
+
   return (
     <Card className="mb-6">
       <CardHeader>
@@ -40,6 +43,7 @@ export function ExerciseSection({ exercises }: ExerciseSectionProps) {
                     key={exercise.id || index}
                     exercise={exercise as any}
                     index={index}
+                    contentId={exercise.contentId}
                   />
                 );
 
@@ -49,6 +53,7 @@ export function ExerciseSection({ exercises }: ExerciseSectionProps) {
                     key={exercise.id || index}
                     exercise={exercise as any}
                     index={index}
+                    contentId={exercise.contentId}
                   />
                 );
 
