@@ -132,18 +132,21 @@ export function LearningPathItem({
       </div>
       <div className="flex items-center gap-3">
         {isCompleted && (
-          <Badge variant="secondary" className="bg-green-100 text-green-800">
-            Completado
+          <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-300">
+            ✓ Completado
           </Badge>
         )}
-        {isCurrent && <Badge className="bg-blue-600">Actual</Badge>}
-        {isLocked && <Badge variant="outline">Bloqueado</Badge>}
+        {isCurrent && !isCompleted && (
+          <Badge className="bg-blue-600 text-white">En Progreso</Badge>
+        )}
+        {isLocked && <Badge variant="outline">🔒 Bloqueado</Badge>}
         <Button
           size="sm"
           disabled={isLocked || isGenerating || isLoading}
           className={cn(
             "cursor-pointer",
-            isCurrent && "bg-blue-600 hover:bg-blue-700"
+            isCurrent && !isCompleted && "bg-blue-600 hover:bg-blue-700",
+            isCompleted && "bg-green-600 hover:bg-green-700"
           )}
           onClick={handleContinue}
         >
@@ -152,13 +155,16 @@ export function LearningPathItem({
               <Loader2 className="h-4 w-4 mr-1 animate-spin" />
               Generando...
             </>
+          ) : isCompleted ? (
+            <>
+              <CheckCircle className="h-4 w-4 mr-1" />
+              Revisar
+            </>
           ) : isCurrent ? (
             <>
               <Play className="h-4 w-4 mr-1" />
               Continuar
             </>
-          ) : isCompleted ? (
-            "Revisar"
           ) : (
             "Comenzar"
           )}

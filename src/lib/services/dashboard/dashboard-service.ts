@@ -57,6 +57,26 @@ export async function getUserProgressData(userId: string) {
 }
 
 /**
+ * Get completed topic IDs for a user's learning path
+ */
+export async function getCompletedTopicIds(
+  userId: string,
+  learningPathId: string
+): Promise<string[]> {
+  try {
+    const db = await getDatabase();
+    const completedTopics = await db.userProgress.getCompletedTopics(
+      userId,
+      learningPathId
+    );
+    return completedTopics.map((progress) => progress.topic_id);
+  } catch (error) {
+    console.error("Error fetching completed topic IDs:", error);
+    return [];
+  }
+}
+
+/**
  * Get user's recent activity
  */
 export async function getUserRecentActivity(userId: string) {
@@ -83,12 +103,54 @@ export function calculateDashboardStats(
 ) {
   const totalTopics = userLearningPath?.topics.length || 12;
   const completedLessons =
-    progress?.filter((p: UserProgress) => p.status === "completed").length || 0;
+    progress?.filter(
+      (p: UserProgress) => p.status === "completed" || p.status === "mastered"
+    ).length || 0;
   const overallProgress = Math.round((completedLessons / totalTopics) * 100);
 
   return {
     totalTopics,
     completedLessons,
     overallProgress
+  };
+}
+
+/**
+ * Determine topic status based on completed topic IDs and sequential learning
+ */
+export function getTopicStatus(
+  topicId: string,
+  topicIndex: number,
+  completedTopicIds: string[],
+  allTopicIds: string[]
+): {
+  isCompleted: boolean;
+  isCurrent: boolean;
+  isLocked: boolean;
+} {
+  // Check if this topic is completed
+  const isCompleted = completedTopicIds.includes(topicId);
+
+  // Find the last completed topic in sequence
+  let lastCompletedIndex = -1;
+  for (let i = 0; i < allTopicIds.length; i++) {
+    if (completedTopicIds.includes(allTopicIds[i])) {
+      lastCompletedIndex = i;
+    } else {
+      // Stop at first non-completed topic (sequential learning)
+      break;
+    }
+  }
+
+  // Current topic is the one right after the last completed
+  const isCurrent = topicIndex === lastCompletedIndex + 1;
+
+  // Locked if it's beyond the current topic
+  const isLocked = topicIndex > lastCompletedIndex + 1;
+
+  return {
+    isCompleted,
+    isCurrent,
+    isLocked
   };
 }

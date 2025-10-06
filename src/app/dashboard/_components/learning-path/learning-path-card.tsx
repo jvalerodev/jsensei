@@ -9,18 +9,19 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen } from "lucide-react";
 import { LearningPathItem } from "./learning-path-item";
+import { getTopicStatus } from "@/lib/services";
 import type { LearningPath } from "@/lib/ai/schemas";
 
 type LearningPathCardProps = {
   learningPath: LearningPath | null;
-  completedTopics?: number;
+  completedTopicIds: string[];
   userLevel?: string;
   userId: string;
 };
 
 export function LearningPathCard({
   learningPath,
-  completedTopics = 0
+  completedTopicIds
 }: LearningPathCardProps) {
   if (!learningPath) {
     return (
@@ -65,16 +66,29 @@ export function LearningPathCard({
       <CardContent>
         <div className="space-y-4">
           {learningPath.topics.map((topic, index) => {
-            const isCompleted = index < completedTopics;
-            const isCurrent = index === completedTopics;
-            const isLocked = index > completedTopics;
+            // Generate topic ID if not present
+            const topicId =
+              (topic as any).id || `${learningPath.id}_topic_${index}`;
+
+            // Get all topic IDs for sequential learning logic
+            const allTopicIds = learningPath.topics.map(
+              (t, i) => (t as any).id || `${learningPath.id}_topic_${i}`
+            );
+
+            // Determine topic status based on completed IDs and sequential learning
+            const { isCompleted, isCurrent, isLocked } = getTopicStatus(
+              topicId,
+              index,
+              completedTopicIds,
+              allTopicIds
+            );
 
             return (
               <LearningPathItem
                 key={`${topic.title}-${index}`}
                 topic={{
                   ...topic,
-                  id: (topic as any).id || `${learningPath.id}_topic_${index}` // Generate ID if not present
+                  id: topicId
                 }}
                 index={index}
                 isCompleted={isCompleted}

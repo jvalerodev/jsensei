@@ -6,7 +6,8 @@ import {
   getUserLearningPath,
   getUserProgressData,
   getUserRecentActivity,
-  calculateDashboardStats
+  calculateDashboardStats,
+  getCompletedTopicIds
 } from "@/lib/services";
 import {
   DashboardHeader,
@@ -42,6 +43,11 @@ export default async function DashboardPage() {
   const progress = await getUserProgressData(user.id);
   const recentActivity = await getUserRecentActivity(user.id);
 
+  // Get completed topic IDs for sequential learning
+  const completedTopicIds = userLearningPath?.id
+    ? await getCompletedTopicIds(user.id, userLearningPath.id)
+    : [];
+
   // Calculate statistics
   const { totalTopics, completedLessons, overallProgress } =
     calculateDashboardStats(userLearningPath, progress);
@@ -68,7 +74,7 @@ export default async function DashboardPage() {
           <div className="lg:col-span-2">
             <LearningPathCard
               learningPath={userLearningPath}
-              completedTopics={completedLessons}
+              completedTopicIds={completedTopicIds}
               userLevel={profile?.skill_level}
               userId={user.id}
             />

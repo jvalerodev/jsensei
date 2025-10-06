@@ -1,28 +1,36 @@
 // Progress model - handles user progress tracking
-import { SupabaseClient } from '@supabase/supabase-js';
-import { BaseModel } from '../base-model';
-import { 
-  UserProgress, 
-  CreateUserProgressData, 
+import { SupabaseClient } from "@supabase/supabase-js";
+import { BaseModel } from "../base-model";
+import {
+  UserProgress,
+  CreateUserProgressData,
   UpdateUserProgressData,
   QueryOptions,
-  PaginatedResult 
-} from '../types';
+  PaginatedResult
+} from "../types";
 
-export class UserProgressModel extends BaseModel<UserProgress, CreateUserProgressData, UpdateUserProgressData> {
+export class UserProgressModel extends BaseModel<
+  UserProgress,
+  CreateUserProgressData,
+  UpdateUserProgressData
+> {
   constructor(supabase: SupabaseClient) {
-    super(supabase, 'user_progress');
+    super(supabase, "user_progress");
   }
 
   /**
    * Create user progress with validation
    */
   async create(progressData: CreateUserProgressData): Promise<UserProgress> {
-    this.validateRequired(progressData, ['user_id', 'learning_path_id', 'topic_id']);
+    this.validateRequired(progressData, [
+      "user_id",
+      "learning_path_id",
+      "topic_id"
+    ]);
 
     const sanitizedData = this.sanitizeData({
       ...progressData,
-      status: progressData.status || 'not_started',
+      status: progressData.status || "not_started",
       score: progressData.score || 0,
       attempts: progressData.attempts || 0,
       time_spent: progressData.time_spent || 0,
@@ -39,15 +47,19 @@ export class UserProgressModel extends BaseModel<UserProgress, CreateUserProgres
    * Update progress for a user and learning path topic
    */
   async updateProgress(
-    userId: string, 
+    userId: string,
     learningPathId: string,
     topic: string,
     updateData: UpdateUserProgressData
   ): Promise<UserProgress | null> {
     try {
       // Try to find existing progress record
-      const existingProgress = await this.findByUserAndTopic(userId, learningPathId, topic);
-      
+      const existingProgress = await this.findByUserAndTopic(
+        userId,
+        learningPathId,
+        topic
+      );
+
       if (existingProgress) {
         // Update existing record
         const updatedData = {
@@ -73,18 +85,22 @@ export class UserProgressModel extends BaseModel<UserProgress, CreateUserProgres
   /**
    * Get user's progress for a specific topic in a learning path
    */
-  async findByUserAndTopic(userId: string, learningPathId: string, topicId: string): Promise<UserProgress | null> {
+  async findByUserAndTopic(
+    userId: string,
+    learningPathId: string,
+    topicId: string
+  ): Promise<UserProgress | null> {
     try {
       const { data, error } = await this.supabase
         .from(this.tableName)
-        .select('*')
-        .eq('user_id', userId)
-        .eq('learning_path_id', learningPathId)
-        .eq('topic_id', topicId)
+        .select("*")
+        .eq("user_id", userId)
+        .eq("learning_path_id", learningPathId)
+        .eq("topic_id", topicId)
         .single();
 
       if (error) {
-        if (error.code === 'PGRST116') {
+        if (error.code === "PGRST116") {
           return null;
         }
         throw this.handleError(error);
@@ -100,30 +116,36 @@ export class UserProgressModel extends BaseModel<UserProgress, CreateUserProgres
    * Get all progress for a user
    */
   async getUserProgress(
-    userId: string, 
+    userId: string,
     options: QueryOptions = {}
   ): Promise<PaginatedResult<UserProgress>> {
-    return this.findAll({ user_id: userId }, {
-      ...options,
-      orderBy: options.orderBy || 'updated_at',
-      orderDirection: options.orderDirection || 'desc'
-    });
+    return this.findAll(
+      { user_id: userId },
+      {
+        ...options,
+        orderBy: options.orderBy || "updated_at",
+        orderDirection: options.orderDirection || "desc"
+      }
+    );
   }
 
   /**
    * Get completed topics for a user
    */
-  async getCompletedTopics(userId: string, learningPathId?: string): Promise<UserProgress[]> {
+  async getCompletedTopics(
+    userId: string,
+    learningPathId?: string
+  ): Promise<UserProgress[]> {
     try {
       let query = this.supabase
         .from(this.tableName)
-        .select('*')
-        .eq('user_id', userId)
-        .in('status', ['completed', 'mastered'])
-        .order('updated_at', { ascending: false });
+        .select("*")
+        .eq("user_id", userId)
+        .not("completed_at", "is", null)
+        .order("updated_at", { ascending: false });
 
       if (learningPathId) {
-        query = query.eq('learning_path_id', learningPathId);
+        query = query.eq("learning_path_id", learningPathId);
       }
 
       const { data, error } = await query;
@@ -145,10 +167,10 @@ export class UserProgressModel extends BaseModel<UserProgress, CreateUserProgres
     try {
       const { data, error } = await this.supabase
         .from(this.tableName)
-        .select('*')
-        .eq('user_id', userId)
-        .eq('status', 'in_progress')
-        .order('updated_at', { ascending: false });
+        .select("*")
+        .eq("user_id", userId)
+        .eq("status", "in_progress")
+        .order("updated_at", { ascending: false });
 
       if (error) {
         throw this.handleError(error);
@@ -164,14 +186,18 @@ export class UserProgressModel extends BaseModel<UserProgress, CreateUserProgres
    * Add time spent on a topic
    */
   async addTimeSpent(
-    userId: string, 
+    userId: string,
     learningPathId: string,
     topic: string,
     timeSpent: number
   ): Promise<UserProgress | null> {
     try {
-      const existing = await this.findByUserAndTopic(userId, learningPathId, topic);
-      
+      const existing = await this.findByUserAndTopic(
+        userId,
+        learningPathId,
+        topic
+      );
+
       if (existing) {
         return this.update(existing.id, {
           time_spent: existing.time_spent + timeSpent,
@@ -183,7 +209,7 @@ export class UserProgressModel extends BaseModel<UserProgress, CreateUserProgres
           learning_path_id: learningPathId,
           topic_id: topic,
           time_spent: timeSpent,
-          status: 'in_progress'
+          status: "in_progress"
         });
       }
     } catch (error) {
@@ -195,13 +221,13 @@ export class UserProgressModel extends BaseModel<UserProgress, CreateUserProgres
    * Complete a topic
    */
   async completeTopic(
-    userId: string, 
+    userId: string,
     learningPathId: string,
     topic: string,
     score: number
   ): Promise<UserProgress | null> {
     return this.updateProgress(userId, learningPathId, topic, {
-      status: 'completed',
+      status: "completed",
       score: score,
       completed_at: new Date().toISOString()
     });
@@ -220,7 +246,7 @@ export class UserProgressModel extends BaseModel<UserProgress, CreateUserProgres
   }> {
     try {
       const { data } = await this.getUserProgress(userId);
-      
+
       if (!data || data.length === 0) {
         return {
           totalLessons: 0,
@@ -233,13 +259,21 @@ export class UserProgressModel extends BaseModel<UserProgress, CreateUserProgres
       }
 
       const totalLessons = data.length;
-      const completedLessons = data.filter(p => p.status === 'completed').length;
-      const inProgressLessons = data.filter(p => p.status === 'in_progress').length;
+      const completedLessons = data.filter(
+        (p) => p.status === "completed"
+      ).length;
+      const inProgressLessons = data.filter(
+        (p) => p.status === "in_progress"
+      ).length;
       const totalTimeSpent = data.reduce((sum, p) => sum + p.time_spent, 0);
-      const completedData = data.filter(p => p.status === 'completed' && p.score > 0);
-      const averageScore = completedData.length > 0 
-        ? completedData.reduce((sum, p) => sum + p.score, 0) / completedData.length 
-        : 0;
+      const completedData = data.filter(
+        (p) => p.status === "completed" && p.score > 0
+      );
+      const averageScore =
+        completedData.length > 0
+          ? completedData.reduce((sum, p) => sum + p.score, 0) /
+            completedData.length
+          : 0;
       const lastActivity = data.length > 0 ? data[0].updated_at : null;
 
       return {
@@ -258,16 +292,18 @@ export class UserProgressModel extends BaseModel<UserProgress, CreateUserProgres
   /**
    * Get leaderboard data
    */
-  async getLeaderboard(limit: number = 10): Promise<Array<{
-    user_id: string;
-    averageScore: number;
-    totalTimeSpent: number;
-    completedLessons: number;
-  }>> {
+  async getLeaderboard(limit: number = 10): Promise<
+    Array<{
+      user_id: string;
+      averageScore: number;
+      totalTimeSpent: number;
+      completedLessons: number;
+    }>
+  > {
     try {
       const { data, error } = await this.supabase
         .from(this.tableName)
-        .select('user_id, score, time_spent, status');
+        .select("user_id, score, time_spent, status");
 
       if (error) {
         throw this.handleError(error);
@@ -293,8 +329,8 @@ export class UserProgressModel extends BaseModel<UserProgress, CreateUserProgres
         acc[userId].totalScore += progress.score;
         acc[userId].totalTimeSpent += progress.time_spent;
         acc[userId].lessonCount++;
-        
-        if (progress.status === 'completed') {
+
+        if (progress.status === "completed") {
           acc[userId].completedLessons++;
         }
 
@@ -305,7 +341,10 @@ export class UserProgressModel extends BaseModel<UserProgress, CreateUserProgres
       const leaderboard = Object.values(userStats)
         .map((stats: any) => ({
           user_id: stats.user_id,
-          averageScore: stats.lessonCount > 0 ? Math.round((stats.totalScore / stats.lessonCount) * 100) / 100 : 0,
+          averageScore:
+            stats.lessonCount > 0
+              ? Math.round((stats.totalScore / stats.lessonCount) * 100) / 100
+              : 0,
           totalTimeSpent: stats.totalTimeSpent,
           completedLessons: stats.completedLessons
         }))
@@ -322,23 +361,25 @@ export class UserProgressModel extends BaseModel<UserProgress, CreateUserProgres
    * Get progress trends for a user
    */
   async getProgressTrends(
-    userId: string, 
+    userId: string,
     days: number = 30
-  ): Promise<Array<{
-    date: string;
-    averageScore: number;
-    timeSpent: number;
-  }>> {
+  ): Promise<
+    Array<{
+      date: string;
+      averageScore: number;
+      timeSpent: number;
+    }>
+  > {
     try {
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - days);
 
       const { data, error } = await this.supabase
         .from(this.tableName)
-        .select('updated_at, score, time_spent')
-        .eq('user_id', userId)
-        .gte('updated_at', startDate.toISOString())
-        .order('updated_at', { ascending: true });
+        .select("updated_at, score, time_spent")
+        .eq("user_id", userId)
+        .gte("updated_at", startDate.toISOString())
+        .order("updated_at", { ascending: true });
 
       if (error) {
         throw this.handleError(error);
@@ -350,8 +391,8 @@ export class UserProgressModel extends BaseModel<UserProgress, CreateUserProgres
 
       // Group by date and calculate daily stats
       const dailyStats = data.reduce((acc, progress) => {
-        const date = new Date(progress.updated_at).toISOString().split('T')[0];
-        
+        const date = new Date(progress.updated_at).toISOString().split("T")[0];
+
         if (!acc[date]) {
           acc[date] = {
             date,
@@ -371,7 +412,10 @@ export class UserProgressModel extends BaseModel<UserProgress, CreateUserProgres
       // Calculate averages
       return Object.values(dailyStats).map((stats: any) => ({
         date: stats.date,
-        averageScore: stats.count > 0 ? Math.round((stats.totalScore / stats.count) * 100) / 100 : 0,
+        averageScore:
+          stats.count > 0
+            ? Math.round((stats.totalScore / stats.count) * 100) / 100
+            : 0,
         timeSpent: stats.timeSpent
       }));
     } catch (error) {
@@ -382,13 +426,21 @@ export class UserProgressModel extends BaseModel<UserProgress, CreateUserProgres
   /**
    * Reset progress for a topic
    */
-  async resetTopicProgress(userId: string, learningPathId: string, topic: string): Promise<boolean> {
+  async resetTopicProgress(
+    userId: string,
+    learningPathId: string,
+    topic: string
+  ): Promise<boolean> {
     try {
-      const existing = await this.findByUserAndTopic(userId, learningPathId, topic);
-      
+      const existing = await this.findByUserAndTopic(
+        userId,
+        learningPathId,
+        topic
+      );
+
       if (existing) {
         await this.update(existing.id, {
-          status: 'not_started',
+          status: "not_started",
           score: 0,
           attempts: 0,
           time_spent: 0,
@@ -404,7 +456,6 @@ export class UserProgressModel extends BaseModel<UserProgress, CreateUserProgres
     }
   }
 
-
   /**
    * Delete all progress for a user
    */
@@ -413,7 +464,7 @@ export class UserProgressModel extends BaseModel<UserProgress, CreateUserProgres
       const { error } = await this.supabase
         .from(this.tableName)
         .delete()
-        .eq('user_id', userId);
+        .eq("user_id", userId);
 
       if (error) {
         throw this.handleError(error);
