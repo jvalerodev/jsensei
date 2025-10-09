@@ -81,7 +81,7 @@ export default function PlacementTestPage() {
       // Check if user already completed placement test
       const userProfile = await db.users.findById(currentUser.id);
       if (userProfile?.placement_test_completed) {
-        router.push("/dashboard");
+        router.replace("/dashboard");
         return;
       }
 
@@ -241,8 +241,11 @@ export default function PlacementTestPage() {
     }
   };
 
-  const handleGoToDashboard = () => {
-    router.push("/dashboard");
+  const handleGoToDashboard = async () => {
+    // Esperar un momento para asegurar que la actualización se propagó
+    await new Promise(resolve => setTimeout(resolve, 500));
+    // Usar replace para evitar que el usuario regrese al test
+    router.replace("/dashboard");
   };
 
   if (isLoading) {

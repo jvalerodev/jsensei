@@ -542,20 +542,11 @@ usuario.edad = 26; // ✅ Permitido (modifica contenido)
     aiGeneratedContent?: any;
   }> {
     try {
-      // Update user profile with test results using the model
-      const db = this.getDb();
-      const updatedUser = await db.users.update(userId, {
-        placement_test_completed: true,
-        placement_test_score: result.totalScore,
-        skill_level: result.skillLevel
-      });
-
-      if (!updatedUser) throw new Error("Failed to update user profile");
-
       let aiGeneratedContent = null;
       let learningPath: LearningPath | undefined;
 
       // Si tenemos datos de la prueba, generar contenido con IA usando la API
+      // La API se encargará de actualizar el usuario Y crear el learning path
       if (placementData) {
         try {
           console.log("🤖 Generando contenido personalizado con IA...");
@@ -611,6 +602,17 @@ usuario.edad = 26; // ✅ Permitido (modifica contenido)
       // Fallback al método tradicional si no hay datos de IA o falló
       if (!learningPath) {
         console.log("📚 Generando plan de aprendizaje conciso tradicional...");
+        
+        // Actualizar usuario en caso de fallback (cuando no se usó la API)
+        const db = this.getDb();
+        const updatedUser = await db.users.update(userId, {
+          placement_test_completed: true,
+          placement_test_score: result.totalScore,
+          skill_level: result.skillLevel
+        });
+
+        if (!updatedUser) throw new Error("Failed to update user profile");
+
         learningPath = await this.generateLearningPath(result);
       }
 

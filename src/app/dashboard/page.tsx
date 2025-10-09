@@ -17,6 +17,9 @@ import {
   LearningPathCard
 } from "./_components";
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function DashboardPage() {
   const supabase = await createServerClient();
 
@@ -29,7 +32,7 @@ export default async function DashboardPage() {
     redirect("/auth/login");
   }
 
-  // Get user profile using the database model
+  // Get user profile using the database model with fresh data
   const db = await getDatabase();
   const profile = await db.users.findById(user.id);
 
