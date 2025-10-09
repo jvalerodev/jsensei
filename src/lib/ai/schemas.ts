@@ -12,17 +12,18 @@ export const ExerciseSchema = z.object({
   question: z.string().min(1, "La pregunta es requerida"),
   type: z.enum(["multiple-choice", "code-completion", "debugging", "coding"]),
   options: z.array(z.string()).optional(),
-  correctAnswer: z.string().min(1, "La respuesta correcta es requerida"),
+  correctAnswer: z.string().optional(), // Opcional para ejercicios tipo 'coding'
   explanation: z.string().min(1, "La explicación es requerida"),
   difficulty: z.enum(["beginner", "intermediate"])
 });
 
 // Esquema simplificado para ejercicios sin ID (para el modelo)
+// Para ejercicios tipo 'coding', correctAnswer es opcional (hay múltiples soluciones)
 export const SimpleExerciseSchema = z.object({
   question: z.string().min(1, "La pregunta es requerida"),
   type: z.enum(["multiple-choice", "code-completion", "debugging", "coding"]),
   options: z.array(z.string()).optional(),
-  correctAnswer: z.string().min(1, "La respuesta correcta es requerida"),
+  correctAnswer: z.string().optional(), // Opcional para ejercicios tipo 'coding'
   explanation: z.string().min(1, "La explicación es requerida"),
   difficulty: z.enum(["beginner", "intermediate"])
 });

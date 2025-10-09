@@ -20,12 +20,18 @@ export type TMultipleChoiceExercise = BaseExercise & {
 
 export type TCodeCompletionExercise = BaseExercise & {
   type: "code-completion";
-  options?: string[];
+  options: string[]; // Ahora requerido - debe tener 4 opciones
+};
+
+export type TDebuggingExercise = BaseExercise & {
+  type: "debugging";
+  options: string[]; // Debe tener 4 opciones
 };
 
 export type Exercise =
   | TMultipleChoiceExercise
   | TCodeCompletionExercise
+  | TDebuggingExercise
   | BaseExercise;
 
 export type ExerciseComponentProps = {

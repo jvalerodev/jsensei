@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Check, X, CheckCircle2, RefreshCw, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { markdownComponents, blockMarkdownComponents } from "../markdown";
+import { markdownComponents, questionMarkdownComponents, blockMarkdownComponents } from "../markdown";
 import type { TMultipleChoiceExercise } from "./exercise-types";
 import { useExerciseInteractions } from "@/hooks/use-exercise-interactions";
 
@@ -193,7 +194,10 @@ export function MultipleChoiceExercise({
       <CardContent>
         {/* Question */}
         <div className="text-slate-700 mb-4">
-          <ReactMarkdown components={markdownComponents}>
+          <ReactMarkdown 
+            remarkPlugins={[remarkGfm]}
+            components={questionMarkdownComponents}
+          >
             {currentExercise.question}
           </ReactMarkdown>
         </div>
@@ -237,7 +241,10 @@ export function MultipleChoiceExercise({
                       {optionLetter}.
                     </span>
                     <div className="text-slate-700 flex-1">
-                      <ReactMarkdown components={markdownComponents}>
+                      <ReactMarkdown 
+                        remarkPlugins={[remarkGfm]}
+                        components={markdownComponents}
+                      >
                         {option}
                       </ReactMarkdown>
                     </div>
@@ -342,6 +349,7 @@ export function MultipleChoiceExercise({
             <div className="font-medium text-slate-900 mb-2">
               Respuesta correcta:{" "}
               <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
                 components={{
                   ...markdownComponents,
                   p: ({ children }: any) => (
@@ -353,7 +361,10 @@ export function MultipleChoiceExercise({
               </ReactMarkdown>
             </div>
             <div className="text-slate-800 text-sm leading-relaxed">
-              <ReactMarkdown components={blockMarkdownComponents}>
+              <ReactMarkdown 
+                remarkPlugins={[remarkGfm]}
+                components={blockMarkdownComponents}
+              >
                 {currentExercise.explanation}
               </ReactMarkdown>
             </div>

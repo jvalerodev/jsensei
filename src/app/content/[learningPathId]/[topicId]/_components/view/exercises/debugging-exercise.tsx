@@ -3,31 +3,31 @@
 import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Code, CheckCircle2, X, Check, RefreshCw, AlertCircle } from "lucide-react";
+import { Bug, CheckCircle2, X, Check, RefreshCw, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { markdownComponents, questionMarkdownComponents, blockMarkdownComponents } from "../markdown";
-import type { TCodeCompletionExercise } from "./exercise-types";
+import type { TDebuggingExercise } from "./exercise-types";
 import { useExerciseInteractions } from "@/hooks/use-exercise-interactions";
 
-type CodeCompletionExerciseProps = {
-  exercise: TCodeCompletionExercise;
+type DebuggingExerciseProps = {
+  exercise: TDebuggingExercise;
   index: number;
   contentId: string;
   onCompleted?: () => void;
   topicTitle?: string;
 };
 
-export function CodeCompletionExercise({
+export function DebuggingExercise({
   exercise,
   index,
   contentId,
   onCompleted,
   topicTitle = "Topic"
-}: CodeCompletionExerciseProps) {
+}: DebuggingExerciseProps) {
   const { saveAnswer, loadSavedAnswer, regenerateExercise, isLoading } = useExerciseInteractions(contentId);
   const [selectedAnswer, setSelectedAnswer] = useState<string>("");
   const [showAnswer, setShowAnswer] = useState(false);
@@ -75,7 +75,7 @@ export function CodeCompletionExercise({
         selectedAnswer,
         currentExercise.correctAnswer,
         isAnswerCorrect,
-        "code-completion",
+        "debugging",
         currentExercise.question
       );
 
@@ -113,7 +113,7 @@ export function CodeCompletionExercise({
     setIsRegenerating(true);
     try {
       const result = await regenerateExercise(
-        "code-completion",
+        "debugging",
         topicTitle,
         currentExercise.question
       );
@@ -146,7 +146,7 @@ export function CodeCompletionExercise({
   const isIncorrect = hasSubmitted && selectedAnswer !== currentExercise.correctAnswer;
 
   return (
-    <Card className="border-l-4 border-l-blue-500">
+    <Card className="border-l-4 border-l-rose-500">
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center gap-2 flex-wrap">
           Ejercicio {index + 1}
@@ -154,8 +154,8 @@ export function CodeCompletionExercise({
             {currentExercise.difficulty}
           </Badge>
           <Badge variant="secondary" className="text-xs">
-            <Code className="h-3 w-3 mr-1" />
-            Completar código
+            <Bug className="h-3 w-3 mr-1" />
+            Debugging
           </Badge>
           {isCorrect && (
             <Badge
@@ -218,7 +218,7 @@ export function CodeCompletionExercise({
                     : showAnswer && isThisSelected && !isThisCorrect
                     ? "border-red-500 bg-red-50"
                     : isThisSelected
-                    ? "border-blue-500 bg-blue-50"
+                    ? "border-rose-500 bg-rose-50"
                     : "border-slate-200 hover:border-slate-300"
                 }`}
               >
@@ -270,7 +270,7 @@ export function CodeCompletionExercise({
               <Button
                 onClick={handleSubmit}
                 disabled={!selectedAnswer || isSaving || isCompleted}
-                className="bg-blue-600 hover:bg-blue-700 cursor-pointer"
+                className="bg-rose-600 hover:bg-rose-700 cursor-pointer"
               >
                 {isSaving ? "Guardando..." : "Verificar Respuesta"}
               </Button>
@@ -338,7 +338,7 @@ export function CodeCompletionExercise({
             className={`p-4 rounded-lg ${
               isCorrect
                 ? "bg-green-50 border border-green-200"
-                : "bg-blue-50 border border-blue-200"
+                : "bg-rose-50 border border-rose-200"
             }`}
           >
             <div className="font-medium text-slate-900 mb-2">

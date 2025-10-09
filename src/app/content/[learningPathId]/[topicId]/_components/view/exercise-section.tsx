@@ -11,6 +11,7 @@ import {
 import {
   MultipleChoiceExercise,
   CodeCompletionExercise,
+  DebuggingExercise,
   type Exercise
 } from "./exercises";
 
@@ -63,8 +64,20 @@ export function ExerciseSection({ exercises, onExerciseCompleted, topicTitle }: 
                   />
                 );
 
+              case "debugging":
+                return (
+                  <DebuggingExercise
+                    key={exercise.id || index}
+                    exercise={exercise as any}
+                    index={index}
+                    contentId={exercise.contentId}
+                    onCompleted={onExerciseCompleted}
+                    topicTitle={topicTitle}
+                  />
+                );
+
               default:
-                // Fallback for other types (debugging, coding, etc.)
+                // Fallback for other types (coding, etc.)
                 return (
                   <Card
                     key={exercise.id || index}
