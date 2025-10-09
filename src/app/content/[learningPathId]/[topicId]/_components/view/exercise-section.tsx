@@ -12,6 +12,7 @@ import {
   MultipleChoiceExercise,
   CodeCompletionExercise,
   DebuggingExercise,
+  CodingExercise,
   type Exercise
 } from "./exercises";
 
@@ -76,20 +77,33 @@ export function ExerciseSection({ exercises, onExerciseCompleted, topicTitle }: 
                   />
                 );
 
+              case "coding":
+                return (
+                  <CodingExercise
+                    key={exercise.id || index}
+                    exercise={exercise as any}
+                    index={index}
+                    contentId={exercise.contentId}
+                    onCompleted={onExerciseCompleted}
+                    topicTitle={topicTitle}
+                  />
+                );
+
               default:
-                // Fallback for other types (coding, etc.)
+                // Fallback for unknown types (shouldn't happen with proper typing)
+                const unknownExercise = exercise as Exercise;
                 return (
                   <Card
-                    key={exercise.id || index}
+                    key={unknownExercise.id || index}
                     className="border-l-4 border-l-slate-400"
                   >
                     <CardHeader>
                       <CardTitle className="text-base">
-                        Ejercicio {index + 1} - Tipo: {exercise.type}
+                        Ejercicio {index + 1} - Tipo: {unknownExercise.type}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-slate-700 mb-2">{exercise.question}</p>
+                      <p className="text-slate-700 mb-2">{unknownExercise.question}</p>
                       <p className="text-sm text-slate-500">
                         Este tipo de ejercicio aún no está implementado.
                       </p>

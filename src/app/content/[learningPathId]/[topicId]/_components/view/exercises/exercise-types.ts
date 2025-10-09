@@ -28,10 +28,21 @@ export type TDebuggingExercise = BaseExercise & {
   options: string[]; // Debe tener 4 opciones
 };
 
+export type TCodingExercise = {
+  id: string;
+  question: string;
+  type: "coding";
+  explanation: string; // Criterios de evaluación
+  difficulty: string;
+  // NO tiene correctAnswer (múltiples soluciones válidas)
+  // NO tiene options (el usuario escribe libremente)
+};
+
 export type Exercise =
   | TMultipleChoiceExercise
   | TCodeCompletionExercise
   | TDebuggingExercise
+  | TCodingExercise
   | BaseExercise;
 
 export type ExerciseComponentProps = {
