@@ -178,12 +178,79 @@ export function useExerciseInteractions(contentId: string) {
     [savedAnswers]
   );
 
+  // Regenerate exercise when max attempts reached
+  const regenerateExercise = useCallback(
+    async (
+      exerciseType: "multiple-choice" | "code-completion" | "debugging" | "coding",
+      topicTitle: string,
+      topicContext: string = ""
+    ): Promise<{
+      success: boolean;
+      newExercise?: any;
+      error?: string;
+    }> => {
+      try {
+        const response = await fetch("/api/exercises/regenerate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            contentId, // contentId es el ID de la fila en contents (el ejercicio)
+            exerciseType,
+            topicTitle,
+            topicContext
+          })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          return {
+            success: false,
+            error: result.error || "Error al regenerar ejercicio"
+          };
+        }
+
+        if (result.success) {
+          // Clear all saved answers for this content (exercise)
+          setSavedAnswers({});
+
+          toast({
+            title: "Ejercicio regenerado",
+            description: "Se ha generado un nuevo ejercicio. ¡Sigue intentando!",
+          });
+
+          return {
+            success: true,
+            newExercise: result.newExercise
+          };
+        }
+
+        return { success: false };
+      } catch (error) {
+        console.error("[useExerciseInteractions] Error regenerating exercise:", error);
+        toast({
+          title: "Error",
+          description: "No se pudo regenerar el ejercicio. Intenta de nuevo.",
+          variant: "destructive"
+        });
+        return {
+          success: false,
+          error: "Error al regenerar ejercicio"
+        };
+      }
+    },
+    [contentId, toast]
+  );
+
   return {
     savedAnswers,
     isLoading,
     saveAnswer,
     loadSavedAnswer,
     getSavedAnswer,
-    hasAnswer
+    hasAnswer,
+    regenerateExercise
   };
 }

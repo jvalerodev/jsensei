@@ -97,8 +97,10 @@ export function TopicContentView({
     });
 
     if (allExercisesCompleted) {
-      console.log("[TopicContentView] All exercises completed, saving progress");
-      
+      console.log(
+        "[TopicContentView] All exercises completed, saving progress"
+      );
+
       const progress = await saveProgress({
         learningPathId,
         topicId
@@ -164,15 +166,14 @@ export function TopicContentView({
       {lesson && <LessonContent lesson={lesson} />}
 
       {exercises.length > 0 && (
-        <ExerciseSection 
+        <ExerciseSection
           exercises={exercises}
           onExerciseCompleted={handleExercisesCompleted}
+          topicTitle={topic.title}
         />
       )}
 
-      <ActionButtons
-        onBackToDashboard={handleBackToDashboard}
-      />
+      <ActionButtons onBackToDashboard={handleBackToDashboard} />
     </div>
   );
 }

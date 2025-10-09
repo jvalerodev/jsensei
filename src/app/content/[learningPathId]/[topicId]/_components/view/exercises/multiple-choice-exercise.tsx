@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
-import { Check, X, CheckCircle2 } from "lucide-react";
+import { Check, X, CheckCircle2, RefreshCw, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -17,15 +17,17 @@ type MultipleChoiceExerciseProps = {
   index: number;
   contentId: string;
   onCompleted?: () => void;
+  topicTitle?: string;
 };
 
 export function MultipleChoiceExercise({
   exercise,
   index,
   contentId,
-  onCompleted
+  onCompleted,
+  topicTitle = "Topic"
 }: MultipleChoiceExerciseProps) {
-  const { saveAnswer, loadSavedAnswer, isLoading } = useExerciseInteractions(contentId);
+  const { saveAnswer, loadSavedAnswer, regenerateExercise, isLoading } = useExerciseInteractions(contentId);
   const [selectedAnswer, setSelectedAnswer] = useState<string>("");
   const [showAnswer, setShowAnswer] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
@@ -36,12 +38,14 @@ export function MultipleChoiceExercise({
   const [aiFeedback, setAiFeedback] = useState<string | undefined>();
   const [aiSuggestions, setAiSuggestions] = useState<string[] | undefined>();
   const [isCompleted, setIsCompleted] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const [currentExercise, setCurrentExercise] = useState(exercise);
 
-  // Load saved answer on mount
+  // Load saved answer on mount or when exercise changes
   useEffect(() => {
     const loadAnswer = async () => {
       setIsLoadingAnswer(true);
-      const savedAnswer = await loadSavedAnswer(exercise.id);
+      const savedAnswer = await loadSavedAnswer(currentExercise.id);
       if (savedAnswer) {
         setSelectedAnswer(savedAnswer.userAnswer);
         setHasSubmitted(true);
@@ -57,22 +61,22 @@ export function MultipleChoiceExercise({
     };
 
     loadAnswer();
-  }, [exercise.id, loadSavedAnswer]);
+  }, [currentExercise.id, loadSavedAnswer]);
 
   const handleSubmit = async () => {
     if (!selectedAnswer) return;
 
-    const isAnswerCorrect = selectedAnswer === exercise.correctAnswer;
+    const isAnswerCorrect = selectedAnswer === currentExercise.correctAnswer;
 
     setIsSaving(true);
     try {
       const result = await saveAnswer(
-        exercise.id,
+        currentExercise.id,
         selectedAnswer,
-        exercise.correctAnswer,
+        currentExercise.correctAnswer,
         isAnswerCorrect,
         "multiple-choice",
-        exercise.question // Send question for AI feedback
+        currentExercise.question // Send question for AI feedback
       );
 
       if (result.success) {
@@ -106,19 +110,53 @@ export function MultipleChoiceExercise({
     setHasSubmitted(false);
     setAiFeedback(undefined);
     setAiSuggestions(undefined);
-    // Don't reset showAnswer if max attempts reached
   };
 
-  const isCorrect = hasSubmitted && selectedAnswer === exercise.correctAnswer;
-  const isIncorrect = hasSubmitted && selectedAnswer !== exercise.correctAnswer;
+  const handleRegenerateExercise = async () => {
+    setIsRegenerating(true);
+    try {
+      const result = await regenerateExercise(
+        "multiple-choice",
+        topicTitle,
+        currentExercise.question
+      );
+
+      if (result.success && result.newExercise) {
+        // Update to the new exercise with the new data
+        setCurrentExercise({
+          ...currentExercise, // Keep type and other metadata
+          id: result.newExercise.id,
+          question: result.newExercise.question,
+          options: result.newExercise.options,
+          correctAnswer: result.newExercise.correctAnswer,
+          explanation: result.newExercise.explanation,
+          difficulty: result.newExercise.difficulty
+        });
+        // Reset all states
+        setSelectedAnswer("");
+        setShowAnswer(false);
+        setHasSubmitted(false);
+        setAttemptNumber(0);
+        setMaxAttemptsReached(false);
+        setIsCompleted(false);
+        setAiFeedback(undefined);
+        setAiSuggestions(undefined);
+      }
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
+
+  const isCorrect = hasSubmitted && selectedAnswer === currentExercise.correctAnswer;
+  const isIncorrect = hasSubmitted && selectedAnswer !== currentExercise.correctAnswer;
 
   return (
     <Card className="border-l-4 border-l-orange-500">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center gap-2">
+        <CardTitle className="text-base flex items-center gap-2 flex-wrap">
           Ejercicio {index + 1}
           <Badge variant="outline" className="text-xs">
-            {exercise.difficulty}
+            {currentExercise.difficulty}
           </Badge>
           <Badge variant="secondary" className="text-xs">
             Opción múltiple
@@ -132,7 +170,7 @@ export function MultipleChoiceExercise({
               Correcto
             </Badge>
           )}
-          {isIncorrect && (
+          {isIncorrect && !maxAttemptsReached && (
             <Badge
               variant="destructive"
               className="text-xs text-white font-bold"
@@ -141,13 +179,22 @@ export function MultipleChoiceExercise({
               Incorrecto
             </Badge>
           )}
+          {maxAttemptsReached && !isCompleted && (
+            <Badge
+              variant="default"
+              className="text-xs bg-amber-600 text-white font-bold animate-pulse"
+            >
+              <AlertCircle className="h-3 w-3 mr-1" />
+              ¡Sigue intentando!
+            </Badge>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent>
         {/* Question */}
         <div className="text-slate-700 mb-4">
           <ReactMarkdown components={markdownComponents}>
-            {exercise.question}
+            {currentExercise.question}
           </ReactMarkdown>
         </div>
 
@@ -155,12 +202,12 @@ export function MultipleChoiceExercise({
         <RadioGroup
           value={selectedAnswer}
           onValueChange={setSelectedAnswer}
-          disabled={isCompleted || maxAttemptsReached}
+          disabled={isCompleted}
           className="space-y-3 mb-4"
         >
-          {exercise.options.map((option, optIndex) => {
+          {currentExercise.options.map((option, optIndex) => {
             const optionLetter = String.fromCharCode(65 + optIndex);
-            const isThisCorrect = option === exercise.correctAnswer;
+            const isThisCorrect = option === currentExercise.correctAnswer;
             const isThisSelected = option === selectedAnswer;
 
             return (
@@ -178,11 +225,11 @@ export function MultipleChoiceExercise({
               >
                 <RadioGroupItem
                   value={option}
-                  id={`${exercise.id}-option-${optIndex}`}
+                  id={`${currentExercise.id}-option-${optIndex}`}
                   className="mt-1"
                 />
                 <Label
-                  htmlFor={`${exercise.id}-option-${optIndex}`}
+                  htmlFor={`${currentExercise.id}-option-${optIndex}`}
                   className="flex-1 cursor-pointer"
                 >
                   <div className="flex items-start gap-2">
@@ -230,8 +277,22 @@ export function MultipleChoiceExercise({
                 ✓ Completado
               </Button>
             ) : maxAttemptsReached ? (
-              <Button variant="outline" disabled>
-                Máximo de intentos alcanzado
+              <Button 
+                onClick={handleRegenerateExercise}
+                disabled={isRegenerating}
+                className="bg-amber-600 hover:bg-amber-700 text-white cursor-pointer"
+              >
+                {isRegenerating ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Generando...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Reintentar con otro ejercicio
+                  </>
+                )}
               </Button>
             ) : (
               <Button 
@@ -288,12 +349,12 @@ export function MultipleChoiceExercise({
                   )
                 }}
               >
-                {exercise.correctAnswer}
+                {currentExercise.correctAnswer}
               </ReactMarkdown>
             </div>
             <div className="text-slate-800 text-sm leading-relaxed">
               <ReactMarkdown components={blockMarkdownComponents}>
-                {exercise.explanation}
+                {currentExercise.explanation}
               </ReactMarkdown>
             </div>
           </div>

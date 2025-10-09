@@ -18,13 +18,15 @@ type CodeCompletionExerciseProps = {
   index: number;
   contentId: string;
   onCompleted?: () => void;
+  topicTitle?: string;
 };
 
 export function CodeCompletionExercise({
   exercise,
   index,
   contentId,
-  onCompleted
+  onCompleted,
+  topicTitle
 }: CodeCompletionExerciseProps) {
   const { saveAnswer, loadSavedAnswer, isLoading } =
     useExerciseInteractions(contentId);
