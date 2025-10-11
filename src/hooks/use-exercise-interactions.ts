@@ -28,6 +28,7 @@ export function useExerciseInteractions(contentId: string) {
   }, [contentId]);
 
   // Save exercise answer with AI feedback support
+  // For "coding" exercises, AI evaluates the code and determines correctness
   const saveAnswer = useCallback(
     async (
       exerciseId: string,
@@ -35,7 +36,8 @@ export function useExerciseInteractions(contentId: string) {
       correctAnswer: string,
       isCorrect: boolean,
       exerciseType: string,
-      exerciseQuestion?: string
+      exerciseQuestion?: string,
+      evaluationCriteria?: string
     ): Promise<{
       success: boolean;
       attemptNumber?: number;
@@ -43,6 +45,8 @@ export function useExerciseInteractions(contentId: string) {
       aiFeedback?: string;
       aiSuggestions?: string[];
       relatedConcepts?: string[];
+      isCorrect?: boolean; // AI-evaluated correctness for coding exercises
+      score?: number; // Score for coding exercises
     }> => {
       try {
         const response = await fetch("/api/exercises/interactions", {
@@ -57,7 +61,8 @@ export function useExerciseInteractions(contentId: string) {
             correctAnswer,
             isCorrect,
             exerciseType,
-            exerciseQuestion
+            exerciseQuestion,
+            evaluationCriteria // For coding exercises
           })
         });
 
@@ -81,23 +86,26 @@ export function useExerciseInteractions(contentId: string) {
         }
 
         if (result.success) {
+          // For coding exercises, use AI-evaluated correctness
+          const evaluatedIsCorrect = result.isCorrect !== undefined ? result.isCorrect : isCorrect;
+          
           // Update local state
           setSavedAnswers((prev) => ({
             ...prev,
             [exerciseId]: {
               userAnswer,
-              isCorrect,
+              isCorrect: evaluatedIsCorrect,
               timestamp: new Date().toISOString(),
               attemptNumber: result.attemptNumber,
               maxAttemptsReached: result.maxAttemptsReached,
-              isCompleted: isCorrect,
+              isCompleted: evaluatedIsCorrect,
               aiFeedback: result.aiFeedback,
               aiSuggestions: result.aiSuggestions
             }
           }));
 
           console.log(
-            `[useExerciseInteractions] Saved answer for ${exerciseId} (Attempt ${result.attemptNumber})`
+            `[useExerciseInteractions] Saved answer for ${exerciseId} (Attempt ${result.attemptNumber}, Correct: ${evaluatedIsCorrect})`
           );
 
           return {
@@ -106,7 +114,9 @@ export function useExerciseInteractions(contentId: string) {
             maxAttemptsReached: result.maxAttemptsReached,
             aiFeedback: result.aiFeedback,
             aiSuggestions: result.aiSuggestions,
-            relatedConcepts: result.relatedConcepts
+            relatedConcepts: result.relatedConcepts,
+            isCorrect: evaluatedIsCorrect,
+            score: result.score
           };
         }
 

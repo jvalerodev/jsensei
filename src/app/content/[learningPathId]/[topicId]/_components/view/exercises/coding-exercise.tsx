@@ -21,13 +21,16 @@ type CodingExerciseProps = {
 };
 
 export function CodingExercise({
-  exercise,
+  exercise: initialExercise,
   index,
   contentId,
   onCompleted,
   topicTitle = "Topic"
 }: CodingExerciseProps) {
-  const { saveAnswer, loadSavedAnswer, isLoading } = useExerciseInteractions(contentId);
+  const { saveAnswer, loadSavedAnswer, regenerateExercise, isLoading } = useExerciseInteractions(contentId);
+  
+  // Local state for exercise (allows updating without page refresh)
+  const [exercise, setExercise] = useState<TCodingExercise>(initialExercise);
   const [userCode, setUserCode] = useState<string>("");
   const [showFeedback, setShowFeedback] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
@@ -41,6 +44,8 @@ export function CodingExercise({
     isPassing: boolean;
     score: number;
   } | null>(null);
+  const [maxAttemptsReached, setMaxAttemptsReached] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
 
   // Load saved answer on mount
   useEffect(() => {
@@ -83,7 +88,8 @@ export function CodingExercise({
         "", // No hay correctAnswer para coding exercises
         false, // Se evaluará con IA
         "coding",
-        exercise.question
+        exercise.question,
+        exercise.explanation // Criterios de evaluación
       );
 
       if (result.success) {
@@ -92,18 +98,15 @@ export function CodingExercise({
         setAiFeedback(result.aiFeedback);
         setAiSuggestions(result.aiSuggestions);
         setShowFeedback(true);
+        setMaxAttemptsReached(result.maxAttemptsReached || false);
 
-        // Evaluar si el código es aceptable según el feedback de la IA
-        // La IA determina si el intento es válido
-        const isPassing = Boolean(
-          result.aiFeedback?.toLowerCase().includes("correcto") ||
-          result.aiFeedback?.toLowerCase().includes("excelente") ||
-          result.aiFeedback?.toLowerCase().includes("bien hecho")
-        );
+        // La IA ya evaluó el código y determinó si es correcto
+        const isPassing = result.isCorrect || false;
+        const codeScore = result.score || 0;
 
         setEvaluationResult({
           isPassing,
-          score: isPassing ? 100 : 60
+          score: codeScore
         });
 
         setIsCompleted(isPassing);
@@ -111,6 +114,9 @@ export function CodingExercise({
         if (isPassing) {
           onCompleted?.();
         }
+      } else if (result.maxAttemptsReached) {
+        setMaxAttemptsReached(true);
+        setShowFeedback(true);
       }
     } finally {
       setIsSaving(false);
@@ -124,6 +130,34 @@ export function CodingExercise({
     setAiFeedback(undefined);
     setAiSuggestions(undefined);
     setEvaluationResult(null);
+  };
+
+  const handleRegenerate = async () => {
+    setIsRegenerating(true);
+    try {
+      const result = await regenerateExercise(
+        "coding",
+        topicTitle,
+        exercise.question
+      );
+
+      if (result.success && result.newExercise) {
+        // Update exercise with new one
+        setExercise(result.newExercise as TCodingExercise);
+        
+        // Reset all states
+        setUserCode("");
+        setHasSubmitted(false);
+        setShowFeedback(false);
+        setAiFeedback(undefined);
+        setAiSuggestions(undefined);
+        setEvaluationResult(null);
+        setMaxAttemptsReached(false);
+        setAttemptNumber(0);
+      }
+    } finally {
+      setIsRegenerating(false);
+    }
   };
 
   return (
@@ -213,6 +247,14 @@ export function CodingExercise({
             ) : isCompleted ? (
               <Button variant="outline" disabled>
                 ✓ Completado
+              </Button>
+            ) : maxAttemptsReached ? (
+              <Button 
+                onClick={handleRegenerate}
+                disabled={isRegenerating}
+                className="bg-orange-600 hover:bg-orange-700 text-white cursor-pointer"
+              >
+                {isRegenerating ? "Regenerando..." : "🔄 Regenerar Ejercicio"}
               </Button>
             ) : (
               <Button 

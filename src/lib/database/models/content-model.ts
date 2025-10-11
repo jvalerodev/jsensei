@@ -296,10 +296,7 @@ export class ContentModel extends BaseModel<
   ): Promise<Content | null> {
     const sanitizedData = this.sanitizeData({
       ...updateData,
-      content:
-        updateData.content && typeof updateData.content === "object"
-          ? JSON.stringify(updateData.content)
-          : updateData.content,
+      content: updateData.content,
       updated_at: new Date().toISOString()
     });
 

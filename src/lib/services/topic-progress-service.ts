@@ -110,8 +110,10 @@ export class TopicProgressService {
   }
 
   /**
-   * Check if all exercises in a topic are completed
-   * (either answered correctly or max attempts reached)
+   * Check if all exercises in a topic are completed correctly
+   * An exercise is ONLY considered completed when answered correctly,
+   * regardless of attempts. If max attempts reached without correct answer,
+   * user must regenerate the exercise and try again.
    */
   static async areAllExercisesCompleted({
     userId,
@@ -136,8 +138,6 @@ export class TopicProgressService {
       return false;
     }
 
-    const MAX_ATTEMPTS = 3;
-
     // Check each exercise
     for (const exercise of contentResult.data) {
       const attempts = await db.userInteractions.getExerciseAttempts(
@@ -145,18 +145,24 @@ export class TopicProgressService {
         exercise.id
       );
 
+      // Exercise is ONLY completed if answered correctly
       const isCompleted = attempts.some(
         (attempt: UserInteraction) => attempt.is_correct === true
       );
-      const maxAttemptsReached = attempts.length >= MAX_ATTEMPTS;
 
-      if (!isCompleted && !maxAttemptsReached) {
-        // This exercise is not yet completed
+      if (!isCompleted) {
+        // This exercise has not been answered correctly yet
+        console.log(
+          `[TopicProgressService] Exercise ${exercise.id} not completed correctly yet`
+        );
         return false;
       }
     }
 
-    // All exercises are completed
+    // All exercises are completed correctly
+    console.log(
+      `[TopicProgressService] All exercises for topic ${topicId} completed correctly`
+    );
     return true;
   }
 

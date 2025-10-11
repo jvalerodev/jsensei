@@ -1,5 +1,6 @@
 import { createServerDatabase } from "@/lib/database/server";
 import { ExerciseFeedbackAIService } from "@/lib/ai/exercise-feedback-ai-service";
+import { CodeEvaluationAIService } from "@/lib/ai/code-evaluation-ai-service";
 import type { UserInteraction } from "@/lib/database/types";
 
 const MAX_ATTEMPTS = 3;
@@ -11,6 +12,7 @@ const MAX_ATTEMPTS = 3;
 export class ExerciseInteractionService {
   /**
    * Save user's exercise answer with AI feedback support
+   * For "coding" exercises, AI evaluates the code and determines correctness
    */
   static async saveExerciseAnswer(
     userId: string,
@@ -21,7 +23,8 @@ export class ExerciseInteractionService {
     isCorrect: boolean,
     exerciseType: string,
     exerciseQuestion?: string,
-    userSkillLevel?: "beginner" | "intermediate"
+    userSkillLevel?: "beginner" | "intermediate",
+    evaluationCriteria?: string
   ): Promise<{
     success: boolean;
     attemptNumber: number;
@@ -29,6 +32,8 @@ export class ExerciseInteractionService {
     aiFeedback?: string;
     aiSuggestions?: string[];
     relatedConcepts?: string[];
+    isCorrect?: boolean; // Return evaluated isCorrect for coding exercises
+    score?: number; // Return score for coding exercises
   }> {
     const db = await createServerDatabase();
 
@@ -66,9 +71,41 @@ export class ExerciseInteractionService {
     let aiFeedback: string | undefined;
     let aiSuggestions: string[] | undefined;
     let relatedConcepts: string[] | undefined;
+    let evaluatedIsCorrect = isCorrect;
+    let score = isCorrect ? 100 : 0;
 
-    // Generate AI feedback only for first and second attempts (not third)
-    if (!isCorrect && exerciseQuestion && attemptNumber < MAX_ATTEMPTS) {
+    // Special handling for "coding" exercises - AI evaluates the code
+    if (exerciseType === "coding" && exerciseQuestion) {
+      try {
+        console.log(`[ExerciseInteractionService] Evaluating coding exercise with AI...`);
+        
+        const evaluation = await CodeEvaluationAIService.evaluateCode(
+          exerciseQuestion,
+          userAnswer,
+          attemptNumber,
+          userSkillLevel || "beginner",
+          evaluationCriteria
+        );
+
+        // AI determines if the code is correct
+        evaluatedIsCorrect = evaluation.isPassing;
+        score = evaluation.score;
+        aiFeedback = evaluation.feedback;
+        aiSuggestions = evaluation.suggestions;
+
+        console.log(
+          `[ExerciseInteractionService] AI Evaluation - Passing: ${evaluatedIsCorrect}, Score: ${score}`
+        );
+      } catch (error) {
+        console.error("[ExerciseInteractionService] Error evaluating code with AI:", error);
+        // If AI fails, treat as incorrect and continue
+        evaluatedIsCorrect = false;
+        score = 0;
+        aiFeedback = "Error al evaluar el código. Por favor, intenta de nuevo.";
+      }
+    } 
+    // For other exercise types, generate feedback only if incorrect
+    else if (!isCorrect && exerciseQuestion && attemptNumber < MAX_ATTEMPTS) {
       try {
         const feedback = await ExerciseFeedbackAIService.generateFeedback(
           exerciseQuestion,
@@ -88,14 +125,14 @@ export class ExerciseInteractionService {
       }
     }
 
-    // Save the interaction (no aiExplanation, will use exercise.explanation instead)
+    // Save the interaction with evaluated correctness
     await db.userInteractions.recordExerciseAnswer(
       userId,
       contentId,
       userAnswer,
       correctAnswer,
-      isCorrect,
-      isCorrect ? 100 : 0,
+      evaluatedIsCorrect, // Use AI-evaluated correctness for coding exercises
+      score,
       aiFeedback,
       aiSuggestions,
       undefined // No AI explanation, use exercise.explanation instead
@@ -107,7 +144,9 @@ export class ExerciseInteractionService {
       maxAttemptsReached: attemptNumber >= MAX_ATTEMPTS,
       aiFeedback,
       aiSuggestions,
-      relatedConcepts
+      relatedConcepts,
+      isCorrect: evaluatedIsCorrect, // Return evaluated correctness
+      score
     };
   }
 

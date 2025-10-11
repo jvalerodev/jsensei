@@ -27,13 +27,23 @@ export async function POST(request: NextRequest) {
       correctAnswer, 
       isCorrect, 
       exerciseType,
-      exerciseQuestion 
+      exerciseQuestion,
+      evaluationCriteria 
     } = body;
 
-    // Validation
-    if (!contentId || !exerciseId || userAnswer === undefined || correctAnswer === undefined || isCorrect === undefined) {
+    // Validation - for coding exercises, correctAnswer and isCorrect are not required
+    const isCodingExercise = exerciseType === "coding";
+    
+    if (!contentId || !exerciseId || userAnswer === undefined) {
       return NextResponse.json(
         { success: false, error: "Datos incompletos" },
+        { status: 400 }
+      );
+    }
+    
+    if (!isCodingExercise && (correctAnswer === undefined || isCorrect === undefined)) {
+      return NextResponse.json(
+        { success: false, error: "correctAnswer e isCorrect son requeridos para ejercicios no-coding" },
         { status: 400 }
       );
     }
@@ -44,16 +54,18 @@ export async function POST(request: NextRequest) {
     const userSkillLevel = userData?.skill_level || "beginner";
 
     // Save the interaction with AI feedback
+    // For coding exercises, AI will evaluate and determine isCorrect
     const result = await ExerciseInteractionService.saveExerciseAnswer(
       user.id,
       contentId,
       exerciseId,
       userAnswer,
-      correctAnswer,
-      isCorrect,
+      correctAnswer || "", // Empty string for coding exercises
+      isCorrect || false, // Will be overridden by AI for coding exercises
       exerciseType || 'unknown',
       exerciseQuestion,
-      userSkillLevel
+      userSkillLevel,
+      evaluationCriteria // Evaluation criteria for coding exercises
     );
 
     if (!result.success) {
@@ -75,7 +87,9 @@ export async function POST(request: NextRequest) {
       maxAttemptsReached: result.maxAttemptsReached,
       aiFeedback: result.aiFeedback,
       aiSuggestions: result.aiSuggestions,
-      relatedConcepts: result.relatedConcepts
+      relatedConcepts: result.relatedConcepts,
+      isCorrect: result.isCorrect, // AI-evaluated correctness for coding exercises
+      score: result.score // Score for coding exercises
     });
   } catch (error) {
     console.error("[API] Error saving exercise answer:", error);
