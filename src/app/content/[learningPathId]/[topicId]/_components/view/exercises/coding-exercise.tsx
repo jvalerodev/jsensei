@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Terminal, CheckCircle2, X, AlertCircle, Lightbulb } from "lucide-react";
+import { Terminal, CheckCircle2, X, AlertCircle, Lightbulb, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +11,9 @@ import { Badge } from "@/components/ui/badge";
 import { questionMarkdownComponents, blockMarkdownComponents } from "../markdown";
 import type { TCodingExercise } from "./exercise-types";
 import { useExerciseInteractions } from "@/hooks/use-exercise-interactions";
+import { executeCode, validateCode } from "@/lib/services/code-execution";
+import type { ExecutionResult } from "@/lib/services/code-execution";
+import { ConsoleOutput } from "./console-output";
 
 type CodingExerciseProps = {
   exercise: TCodingExercise;
@@ -46,6 +49,10 @@ export function CodingExercise({
   } | null>(null);
   const [maxAttemptsReached, setMaxAttemptsReached] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
+  
+  // Code execution states
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [executionResult, setExecutionResult] = useState<ExecutionResult | null>(null);
 
   // Load saved answer on mount
   useEffect(() => {
@@ -130,6 +137,7 @@ export function CodingExercise({
     setAiFeedback(undefined);
     setAiSuggestions(undefined);
     setEvaluationResult(null);
+    setExecutionResult(null);
   };
 
   const handleRegenerate = async () => {
@@ -154,9 +162,43 @@ export function CodingExercise({
         setEvaluationResult(null);
         setMaxAttemptsReached(false);
         setAttemptNumber(0);
+        setExecutionResult(null);
       }
     } finally {
       setIsRegenerating(false);
+    }
+  };
+
+  const handleRunCode = async () => {
+    if (!userCode.trim()) return;
+
+    // Validate code before execution
+    const validation = validateCode(userCode);
+    if (!validation.isValid) {
+      setExecutionResult({
+        success: false,
+        output: [],
+        error: validation.reason || 'Código no válido',
+        executionTime: 0,
+      });
+      return;
+    }
+
+    setIsExecuting(true);
+    setExecutionResult(null);
+
+    try {
+      const result = await executeCode(userCode);
+      setExecutionResult(result);
+    } catch (error) {
+      setExecutionResult({
+        success: false,
+        output: [],
+        error: error instanceof Error ? error.message : 'Error desconocido',
+        executionTime: 0,
+      });
+    } finally {
+      setIsExecuting(false);
     }
   };
 
@@ -236,6 +278,15 @@ export function CodingExercise({
             )}
           </div>
           <div className="flex gap-2">
+            <Button
+              onClick={handleRunCode}
+              disabled={!userCode.trim() || isExecuting}
+              variant="outline"
+              className="border-blue-500 text-blue-600 hover:bg-blue-50 cursor-pointer"
+            >
+              <Play className="h-4 w-4 mr-2" />
+              {isExecuting ? "Ejecutando..." : "Probar Código"}
+            </Button>
             {!hasSubmitted ? (
               <Button
                 onClick={handleSubmit}
@@ -267,6 +318,13 @@ export function CodingExercise({
             )}
           </div>
         </div>
+
+        {/* Console Output */}
+        {executionResult && (
+          <div className="mb-4">
+            <ConsoleOutput result={executionResult} />
+          </div>
+        )}
 
         {/* AI Feedback (shown after submission) */}
         {showFeedback && aiFeedback && (
