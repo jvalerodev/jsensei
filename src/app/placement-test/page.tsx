@@ -136,19 +136,9 @@ export default function PlacementTestPage() {
         });
       }
 
-      // Use the placement service for evaluation and content generation
-      const { placementService } = await import("@/lib/ai/placement-service");
+      console.log("🤖 Evaluando respuestas con IA...");
 
-      const placementResult = await placementService.evaluatePlacementTest(
-        user.id,
-        answers.map((answer) => ({
-          questionId: answer.questionId,
-          selectedAnswer: answer.answer,
-          responseTime: answer.responseTime
-        }))
-      );
-
-      // Create placement test data for AI content generation
+      // Prepare data for AI evaluation
       const placementData: PlacementTestData = {
         userId: user.id,
         responses: answers.map((answer) => ({
@@ -165,51 +155,54 @@ export default function PlacementTestPage() {
           topic: q.topic,
           points: q.points
         })),
-        totalScore: placementResult.totalScore,
-        maxScore: placementResult.maxScore,
-        skillLevel: placementResult.skillLevel,
-        weakAreas: placementResult.weakAreas,
-        strongAreas: placementResult.strongAreas,
         testDuration: Date.now() - testStartTime,
         completedAt: new Date().toISOString()
       };
 
-      // Complete user placement and generate learning path with AI
+      // Evaluate with AI and generate learning path
       setIsGeneratingContent(true);
-      const { success, learningPath, aiGeneratedContent } =
-        await placementService.completeUserPlacement(
-          user.id,
-          placementResult,
-          placementData
-        );
+      const response = await fetch("/api/ai/evaluate-placement-test", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(placementData)
+      });
+
+      if (!response.ok) {
+        throw new Error(`API call failed: ${response.status}`);
+      }
+
+      const apiResult = await response.json();
       setIsGeneratingContent(false);
 
-      if (!success) {
+      if (!apiResult.success) {
         throw new Error("Failed to complete placement test");
       }
 
+      console.log("✅ Evaluación con IA completada exitosamente");
+      console.log("📊 Plan de aprendizaje:", apiResult.learningPath.title);
+      console.log("📚 Temas generados:", apiResult.learningPath.topics.length);
+
+      // Calculate UI result from AI analysis
+      const correctAnswers = answers.filter((a) => a.isCorrect).length;
+      const maxScore = questions.reduce((sum, q) => sum + q.points, 0);
+      const totalScore = answers.reduce((sum, answer) => {
+        const question = questions.find((q) => q.id === answer.questionId);
+        return sum + (answer.isCorrect && question ? question.points : 0);
+      }, 0);
+
       // Convert to UI format
       const result: TestResult = {
-        totalScore: placementResult.totalScore,
-        maxScore: placementResult.maxScore,
-        skillLevel: placementResult.skillLevel,
-        correctAnswers: placementResult.correctAnswers,
-        totalQuestions: placementResult.totalQuestions
+        totalScore,
+        maxScore,
+        skillLevel: apiResult.analysis.skillLevel,
+        correctAnswers,
+        totalQuestions: answers.length
       };
 
       setTestResult(result);
       setTestCompleted(true);
-
-      // Log success with AI content info
-      if (aiGeneratedContent) {
-        console.log(
-          "🎉 Prueba completada exitosamente con contenido de IA generado"
-        );
-        console.log("📊 Plan de aprendizaje:", learningPath?.title);
-        console.log("📚 Temas generados:", learningPath?.topics.length);
-      } else {
-        console.log("📚 Prueba completada con plan de aprendizaje tradicional");
-      }
     } catch (error) {
       console.error("❌ Error completing test:", error);
       // Mostrar mensaje de error al usuario

@@ -125,11 +125,12 @@ export interface PlacementTestData {
     topic: string;
     points: number;
   }>;
-  totalScore: number;
-  maxScore: number;
-  skillLevel: "beginner" | "intermediate";
-  weakAreas: string[];
-  strongAreas: string[];
+  // Campos opcionales - la IA los calculará si no se proporcionan
+  totalScore?: number;
+  maxScore?: number;
+  skillLevel?: "beginner" | "intermediate";
+  weakAreas?: string[];
+  strongAreas?: string[];
   testDuration: number;
   completedAt: string;
 }
