@@ -1,15 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { getDatabase } from "@/lib/database/server";
-import { ExerciseGeneratorAIService } from "@/lib/ai/exercise-generator-ai-service";
+import { ExerciseGeneratorAIService } from "@/lib/ai";
 import { randomUUID } from "crypto";
 import { z } from "zod";
 
 const RegenerateExerciseSchema = z.object({
   contentId: z.string().uuid("ID de contenido inválido"),
-  exerciseType: z.enum(["multiple-choice", "code-completion", "debugging", "coding"]),
+  exerciseType: z.enum([
+    "multiple-choice",
+    "code-completion",
+    "debugging",
+    "coding"
+  ]),
   topicTitle: z.string().min(1, "Título del topic requerido"),
-  topicContext: z.string().optional().default(""),
+  topicContext: z.string().optional().default("")
 });
 
 /**
@@ -37,18 +42,21 @@ export async function POST(request: NextRequest) {
 
     if (!validationResult.success) {
       return NextResponse.json(
-        { 
-          success: false, 
-          error: "Datos inválidos", 
-          details: validationResult.error.errors 
+        {
+          success: false,
+          error: "Datos inválidos",
+          details: validationResult.error.errors
         },
         { status: 400 }
       );
     }
 
-    const { contentId, exerciseType, topicTitle, topicContext } = validationResult.data;
+    const { contentId, exerciseType, topicTitle, topicContext } =
+      validationResult.data;
 
-    console.log(`[Regenerate Exercise] Iniciando regeneración para ejercicio contentId: ${contentId}`);
+    console.log(
+      `[Regenerate Exercise] Iniciando regeneración para ejercicio contentId: ${contentId}`
+    );
 
     // Obtener información del usuario para personalización
     const db = await getDatabase();
@@ -57,7 +65,7 @@ export async function POST(request: NextRequest) {
 
     // Obtener el ejercicio actual (cada ejercicio es una fila en contents)
     const existingExercise = await db.contents.findById(contentId);
-    
+
     if (!existingExercise) {
       return NextResponse.json(
         { success: false, error: "Ejercicio no encontrado" },
@@ -81,9 +89,14 @@ export async function POST(request: NextRequest) {
     };
 
     // Generar nuevo ejercicio con IA, pasando el ejercicio anterior para que lo evite
-    console.log(`[Regenerate Exercise] Generando nuevo ejercicio de tipo: ${exerciseType}`);
-    console.log(`[Regenerate Exercise] Ejercicio anterior a evitar:`, previousExercise.question.substring(0, 100));
-    
+    console.log(
+      `[Regenerate Exercise] Generando nuevo ejercicio de tipo: ${exerciseType}`
+    );
+    console.log(
+      `[Regenerate Exercise] Ejercicio anterior a evitar:`,
+      previousExercise.question.substring(0, 100)
+    );
+
     const newExercise = await ExerciseGeneratorAIService.generateSingleExercise(
       topicTitle,
       topicContext,
@@ -113,13 +126,16 @@ export async function POST(request: NextRequest) {
     // Eliminar todas las interacciones del ejercicio (borramos todo el historial de ese contentId)
     console.log(`[Regenerate Exercise] Eliminando interacciones del ejercicio`);
     const { error: deleteError } = await supabase
-      .from('user_interactions')
+      .from("user_interactions")
       .delete()
-      .eq('user_id', user.id)
-      .eq('content_id', contentId);
+      .eq("user_id", user.id)
+      .eq("content_id", contentId);
 
     if (deleteError) {
-      console.warn(`[Regenerate Exercise] Advertencia al eliminar interacciones:`, deleteError);
+      console.warn(
+        `[Regenerate Exercise] Advertencia al eliminar interacciones:`,
+        deleteError
+      );
       // No es crítico, continuamos
     }
 
@@ -130,13 +146,15 @@ export async function POST(request: NextRequest) {
       message: "Ejercicio regenerado exitosamente",
       newExercise: newExerciseContent
     });
-
   } catch (error) {
     console.error("[Regenerate Exercise] Error:", error);
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Error al regenerar ejercicio"
+        error:
+          error instanceof Error
+            ? error.message
+            : "Error al regenerar ejercicio"
       },
       { status: 500 }
     );

@@ -1,6 +1,5 @@
 import { createServerDatabase } from "@/lib/database/server";
-import { ExerciseFeedbackAIService } from "@/lib/ai/exercise-feedback-ai-service";
-import { CodeEvaluationAIService } from "@/lib/ai/code-evaluation-ai-service";
+import { CodeEvaluationAIService, ExerciseFeedbackAIService } from "@/lib/ai";
 import type { UserInteraction } from "@/lib/database/types";
 
 const MAX_ATTEMPTS = 3;
@@ -77,8 +76,10 @@ export class ExerciseInteractionService {
     // Special handling for "coding" exercises - AI evaluates the code
     if (exerciseType === "coding" && exerciseQuestion) {
       try {
-        console.log(`[ExerciseInteractionService] Evaluating coding exercise with AI...`);
-        
+        console.log(
+          `[ExerciseInteractionService] Evaluating coding exercise with AI...`
+        );
+
         const evaluation = await CodeEvaluationAIService.evaluateCode(
           exerciseQuestion,
           userAnswer,
@@ -97,13 +98,16 @@ export class ExerciseInteractionService {
           `[ExerciseInteractionService] AI Evaluation - Passing: ${evaluatedIsCorrect}, Score: ${score}`
         );
       } catch (error) {
-        console.error("[ExerciseInteractionService] Error evaluating code with AI:", error);
+        console.error(
+          "[ExerciseInteractionService] Error evaluating code with AI:",
+          error
+        );
         // If AI fails, treat as incorrect and continue
         evaluatedIsCorrect = false;
         score = 0;
         aiFeedback = "Error al evaluar el código. Por favor, intenta de nuevo.";
       }
-    } 
+    }
     // For other exercise types, generate feedback only if incorrect
     else if (!isCorrect && exerciseQuestion && attemptNumber < MAX_ATTEMPTS) {
       try {
@@ -120,7 +124,10 @@ export class ExerciseInteractionService {
         aiSuggestions = feedback.hints;
         relatedConcepts = feedback.relatedConcepts;
       } catch (error) {
-        console.error("[ExerciseInteractionService] Error generating feedback:", error);
+        console.error(
+          "[ExerciseInteractionService] Error generating feedback:",
+          error
+        );
         // Continue without feedback rather than failing
       }
     }
@@ -183,9 +190,9 @@ export class ExerciseInteractionService {
 
     // Get latest attempt
     const latestAttempt = attempts[attempts.length - 1];
-    
+
     // Check if completed (any correct answer)
-    const isCompleted = attempts.some(attempt => attempt.is_correct === true);
+    const isCompleted = attempts.some((attempt) => attempt.is_correct === true);
 
     return {
       userAnswer: latestAttempt.user_answer || "",
@@ -221,7 +228,11 @@ export class ExerciseInteractionService {
       }
     >
   > {
-    const exerciseData = await this.getExerciseAnswer(userId, contentId, exerciseId);
+    const exerciseData = await this.getExerciseAnswer(
+      userId,
+      contentId,
+      exerciseId
+    );
 
     if (!exerciseData) {
       return {};

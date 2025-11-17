@@ -1,14 +1,24 @@
 import { generateObject } from "ai";
-import { google } from "./google";
+import { google } from "../google";
 import { z } from "zod";
 
 /**
  * Schema para el feedback de ejercicios
  */
 const ExerciseFeedbackSchema = z.object({
-  feedback: z.string().describe("Feedback constructivo sobre por qué la respuesta es incorrecta, sin revelar la respuesta correcta"),
-  hints: z.array(z.string()).describe("2-3 pistas para ayudar al estudiante a encontrar la respuesta correcta"),
-  relatedConcepts: z.array(z.string()).describe("Conceptos relacionados que el estudiante debe repasar")
+  feedback: z
+    .string()
+    .describe(
+      "Feedback constructivo sobre por qué la respuesta es incorrecta, sin revelar la respuesta correcta"
+    ),
+  hints: z
+    .array(z.string())
+    .describe(
+      "2-3 pistas para ayudar al estudiante a encontrar la respuesta correcta"
+    ),
+  relatedConcepts: z
+    .array(z.string())
+    .describe("Conceptos relacionados que el estudiante debe repasar")
 });
 
 type ExerciseFeedback = z.infer<typeof ExerciseFeedbackSchema>;

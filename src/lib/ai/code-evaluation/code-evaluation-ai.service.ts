@@ -1,5 +1,5 @@
 import { generateObject } from "ai";
-import { google } from "./google";
+import { google } from "../google";
 import { z } from "zod";
 
 /**

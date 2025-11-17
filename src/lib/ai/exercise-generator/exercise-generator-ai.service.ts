@@ -1,6 +1,6 @@
 import { generateObject } from "ai";
-import { google } from "./google";
-import { SimpleExerciseSchema, type SimpleExercise } from "./schemas";
+import { google } from "../google";
+import { SimpleExerciseSchema, type SimpleExercise } from "../schemas";
 
 /**
  * Servicio de IA para generar ejercicios individuales
@@ -14,7 +14,11 @@ export class ExerciseGeneratorAIService {
   static async generateSingleExercise(
     topicTitle: string,
     topicContext: string,
-    exerciseType: "multiple-choice" | "code-completion" | "debugging" | "coding",
+    exerciseType:
+      | "multiple-choice"
+      | "code-completion"
+      | "debugging"
+      | "coding",
     userSkillLevel: "beginner" | "intermediate",
     previousExercise?: {
       question: string;
@@ -50,9 +54,7 @@ export class ExerciseGeneratorAIService {
         `❌ Error generando ejercicio de tipo "${exerciseType}":`,
         error
       );
-      throw new Error(
-        `Error al generar ejercicio de tipo: ${exerciseType}`
-      );
+      throw new Error(`Error al generar ejercicio de tipo: ${exerciseType}`);
     }
   }
 
@@ -62,7 +64,11 @@ export class ExerciseGeneratorAIService {
   private static buildExercisePrompt(
     topicTitle: string,
     topicContext: string,
-    exerciseType: "multiple-choice" | "code-completion" | "debugging" | "coding",
+    exerciseType:
+      | "multiple-choice"
+      | "code-completion"
+      | "debugging"
+      | "coding",
     userSkillLevel: "beginner" | "intermediate",
     previousExercise?: {
       question: string;
@@ -76,14 +82,15 @@ export class ExerciseGeneratorAIService {
         : "intermedio (conceptos más avanzados, explicaciones concisas pero completas)";
 
     const typeInstructions = this.getTypeSpecificInstructions(exerciseType);
-    
+
     const actionWord = previousExercise ? "REGENERAR" : "GENERAR";
-    const actionDescription = previousExercise 
+    const actionDescription = previousExercise
       ? "regenerar un ejercicio SIMILAR al anterior pero con contenido DIFERENTE"
       : "generar un nuevo ejercicio educativo de calidad";
 
     // Construir sección de ejercicio anterior si existe
-    const previousExerciseSection = previousExercise ? `
+    const previousExerciseSection = previousExercise
+      ? `
 ═══════════════════════════════════════════════════════════════════
 🔄 EJERCICIO A REGENERAR
 ═══════════════════════════════════════════════════════════════════
@@ -92,7 +99,13 @@ El estudiante ya intentó este ejercicio sin éxito y necesita uno SIMILAR pero 
 **Pregunta anterior:**
 ${previousExercise.question}
 
-${previousExercise.options && previousExercise.options.length > 0 ? `**Opciones anteriores:**\n${previousExercise.options.map((opt, i) => `${i + 1}. ${opt}`).join('\n')}\n` : ''}
+${
+  previousExercise.options && previousExercise.options.length > 0
+    ? `**Opciones anteriores:**\n${previousExercise.options
+        .map((opt, i) => `${i + 1}. ${opt}`)
+        .join("\n")}\n`
+    : ""
+}
 **Respuesta correcta anterior:**
 ${previousExercise.correctAnswer}
 
@@ -106,7 +119,8 @@ ${previousExercise.correctAnswer}
 • El objetivo es dar al estudiante OTRA OPORTUNIDAD de aprender el mismo concepto
 • Mantén el mismo nivel de dificultad: ${userSkillLevel}
 
-` : '';
+`
+      : "";
 
     return `Eres un tutor experto de JavaScript especializado en crear ejercicios educativos personalizados. Tu objetivo es ${actionDescription} que será mostrado en una aplicación web y almacenado en base de datos.
 
@@ -128,9 +142,11 @@ ${typeInstructions}
 ═══════════════════════════════════════════════════════════════════
 
 **ESTRUCTURA DEL EJERCICIO:**
-${exerciseType !== "coding" 
-  ? "✓ GENERAR EXACTAMENTE 4 OPCIONES: 1 correcta + 3 distractores plausibles\n✓ La respuesta correcta debe coincidir EXACTAMENTE con una de las 4 opciones\n✓ Los distractores deben ser errores comunes o conceptos relacionados" 
-  : "✓ NO incluir campo 'correctAnswer' (múltiples soluciones válidas)\n✓ El array 'options' debe estar vacío: []\n✓ La 'explanation' describe criterios de evaluación"}
+${
+  exerciseType !== "coding"
+    ? "✓ GENERAR EXACTAMENTE 4 OPCIONES: 1 correcta + 3 distractores plausibles\n✓ La respuesta correcta debe coincidir EXACTAMENTE con una de las 4 opciones\n✓ Los distractores deben ser errores comunes o conceptos relacionados"
+    : "✓ NO incluir campo 'correctAnswer' (múltiples soluciones válidas)\n✓ El array 'options' debe estar vacío: []\n✓ La 'explanation' describe criterios de evaluación"
+}
 
 **FORMATO DE CÓDIGO Y MARKDOWN:**
 ✓ TODO EL CÓDIGO debe usar formato Markdown de GitHub: \`\`\`javascript\\ncódigo aquí\\n\`\`\`
@@ -143,9 +159,12 @@ ${exerciseType !== "coding"
   • Listas: - Punto 1\\n- Punto 2
 
 **CONTENIDO Y CALIDAD:**
-${previousExercise 
-  ? "✓ El ejercicio debe ser SIMILAR en concepto pero DIFERENTE en implementación\n✓ Mantén el mismo nivel de dificultad del ejercicio anterior\n✓ Cambia el enfoque, caso de uso o ejemplo específico" 
-  : "✓ Pregunta clara y específica sobre el concepto del topic\n✓ Nivel de dificultad apropiado para: " + userSkillLevel}
+${
+  previousExercise
+    ? "✓ El ejercicio debe ser SIMILAR en concepto pero DIFERENTE en implementación\n✓ Mantén el mismo nivel de dificultad del ejercicio anterior\n✓ Cambia el enfoque, caso de uso o ejemplo específico"
+    : "✓ Pregunta clara y específica sobre el concepto del topic\n✓ Nivel de dificultad apropiado para: " +
+      userSkillLevel
+}
 ✓ Explicación detallada de POR QUÉ esa es la respuesta correcta
 ✓ Contenido en español claro y profesional
 ✓ JSON válido sin caracteres especiales problemáticos
@@ -154,7 +173,11 @@ ${previousExercise
 ✗ NO uses preguntas triviales o de memorización
 ✗ NO incluyas texto fuera del JSON
 ✗ NO uses código no ejecutable o sin formato markdown
-${previousExercise ? "✗ NO repitas la misma pregunta o ejemplos del ejercicio anterior\n✗ NO uses las mismas opciones o respuestas" : ""}
+${
+  previousExercise
+    ? "✗ NO repitas la misma pregunta o ejemplos del ejercicio anterior\n✗ NO uses las mismas opciones o respuestas"
+    : ""
+}
 
 ═══════════════════════════════════════════════════════════════════
 📋 FORMATO JSON DE RESPUESTA
@@ -163,8 +186,16 @@ ${previousExercise ? "✗ NO repitas la misma pregunta o ejemplos del ejercicio 
 {
   "question": "Pregunta clara y específica del ejercicio (usar \\n para saltos de línea)",
   "type": "${exerciseType}",
-  "options": ${exerciseType !== "coding" ? '["Opción 1", "Opción 2", "Opción 3 (correcta)", "Opción 4"]' : "[]"},
-  ${exerciseType !== "coding" ? '"correctAnswer": "Respuesta que coincide EXACTAMENTE con una opción",' : ''}
+  "options": ${
+    exerciseType !== "coding"
+      ? '["Opción 1", "Opción 2", "Opción 3 (correcta)", "Opción 4"]'
+      : "[]"
+  },
+  ${
+    exerciseType !== "coding"
+      ? '"correctAnswer": "Respuesta que coincide EXACTAMENTE con una opción",'
+      : ""
+  }
   "explanation": "Explicación detallada con markdown si es necesario (usar \\n para saltos)",
   "difficulty": "${userSkillLevel}"
 }
@@ -204,7 +235,7 @@ Genera ÚNICAMENTE el JSON válido, sin texto adicional antes o después.`;
   options: ["var", "let", "const", "function"]
   correctAnswer: "const"`,
 
-      "debugging": `
+      debugging: `
 **Instrucciones para DEBUGGING (Formato Selección Múltiple):**
 • Presenta código con 1-2 errores sutiles pero realistas
 • El código DEBE estar en formato markdown: \`\`\`javascript\\ncódigo\\n\`\`\`
@@ -221,7 +252,7 @@ Genera ÚNICAMENTE el JSON válido, sin texto adicional antes o después.`;
   ]
   correctAnswer: "No puedes reasignar una constante. Deberías usar 'let' en lugar de 'const'"`,
 
-      "coding": `
+      coding: `
 **Instrucciones para CODING:**
 • Describe un problema práctico que requiere escribir código
 • El problema debe ser pequeño pero realista (2-5 líneas de código)
