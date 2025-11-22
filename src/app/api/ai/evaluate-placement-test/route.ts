@@ -51,16 +51,33 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = PersonalizedContentRequestSchema.parse(body);
 
+    // Calcular el score sumando los puntos de las respuestas correctas
+    const totalScore = validatedData.responses.reduce((sum, response) => {
+      if (response.isCorrect) {
+        const question = validatedData.questions.find(
+          (q) => q.id === response.questionId
+        );
+        return sum + (question?.points || 0);
+      }
+      return sum;
+    }, 0);
+
+    // Calcular el score máximo posible
+    const maxScore = validatedData.questions.reduce(
+      (sum, q) => sum + q.points,
+      0
+    );
+
     // Preparar datos para el análisis
     const placementData = {
       userId: user.id,
       responses: validatedData.responses,
       questions: validatedData.questions,
-      totalScore: validatedData.totalScore || 0,
-      maxScore: validatedData.maxScore || 0,
-      skillLevel: validatedData.skillLevel || "beginner",
-      weakAreas: validatedData.weakAreas || [],
-      strongAreas: validatedData.strongAreas || [],
+      totalScore,
+      maxScore,
+      skillLevel: validatedData.skillLevel,
+      weakAreas: validatedData.weakAreas,
+      strongAreas: validatedData.strongAreas,
       testDuration: validatedData.testDuration || 0,
       completedAt: new Date().toISOString()
     };
@@ -89,7 +106,7 @@ export async function POST(request: NextRequest) {
       // Marcar el placement test como completado
       await db.users.update(user.id, {
         placement_test_completed: true,
-        placement_test_score: validatedData.totalScore || 0,
+        placement_test_score: totalScore,
         skill_level: result.analysis.skillLevel
       });
     } catch (dbError) {
@@ -99,6 +116,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      totalScore,
+      maxScore,
       analysis: result.analysis,
       learningPath: {
         ...result.learningPath,

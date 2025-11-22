@@ -63,11 +63,11 @@ export default function PlacementTestPage() {
       // Load active questions using the model
       const beginnerQuestions =
         await db.placementTests.getQuestionsByDifficulty("beginner", {
-          limit: 6
+          limit: 10
         });
       const intermediateQuestions =
         await db.placementTests.getQuestionsByDifficulty("intermediate", {
-          limit: 6
+          limit: 10
         });
 
       const selectedQuestions = [
@@ -183,19 +183,18 @@ export default function PlacementTestPage() {
       console.log("✅ Evaluación con IA completada exitosamente");
       console.log("📊 Plan de aprendizaje:", apiResult.learningPath.title);
       console.log("📚 Temas generados:", apiResult.learningPath.topics.length);
+      console.log(
+        "🎯 Puntuación:",
+        `${apiResult.totalScore}/${apiResult.maxScore}`
+      );
 
-      // Calculate UI result from AI analysis
+      // Calculate UI result from API response
       const correctAnswers = answers.filter((a) => a.isCorrect).length;
-      const maxScore = questions.reduce((sum, q) => sum + q.points, 0);
-      const totalScore = answers.reduce((sum, answer) => {
-        const question = questions.find((q) => q.id === answer.questionId);
-        return sum + (answer.isCorrect && question ? question.points : 0);
-      }, 0);
 
       // Convert to UI format
       const result: TestResult = {
-        totalScore,
-        maxScore,
+        totalScore: apiResult.totalScore,
+        maxScore: apiResult.maxScore,
         skillLevel: apiResult.analysis.skillLevel,
         correctAnswers,
         totalQuestions: answers.length

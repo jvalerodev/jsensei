@@ -70,7 +70,7 @@ export class PlacementTestAIService {
   private static buildPlacementAnalysisPrompt(data: PlacementTestData): string {
     const { responses, questions } = data;
 
-    const questionAnalysis = responses.map((response, index) => {
+    const questionAnalysis = responses.map((response) => {
       const question = questions.find((q) => q.id === response.questionId);
       return {
         question: question?.question || "Pregunta no encontrada",
@@ -88,7 +88,7 @@ RESPUESTAS DEL ESTUDIANTE:
 ${JSON.stringify(questionAnalysis, null, 2)}
 
 INSTRUCCIONES:
-1. Determina el nivel de habilidad actual (beginner, intermediate, advanced)
+1. Determina el nivel de habilidad actual (beginner, intermediate)
 2. Identifica áreas débiles que necesitan refuerzo
 3. Identifica áreas fuertes del estudiante
 4. Recomienda temas específicos para estudiar
