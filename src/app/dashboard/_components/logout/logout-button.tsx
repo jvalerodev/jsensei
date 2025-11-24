@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,8 +11,6 @@ import {
   TooltipTrigger
 } from "@/components/ui/tooltip";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
 
 export function LogoutButton() {
   const router = useRouter();
@@ -21,6 +21,7 @@ export function LogoutButton() {
     try {
       const supabase = createClient();
       await supabase.auth.signOut();
+      await fetch("/api/auth/logout", { method: "POST" });
       router.push("/auth/login");
       router.refresh();
     } catch (error) {

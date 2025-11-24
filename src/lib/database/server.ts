@@ -12,11 +12,15 @@ import { LearningPathModel } from "./models/learning-path-model";
 // Types
 export * from "./types";
 
-// Global server database instance
+// Global server database instance with session tracking
 let serverDbInstance: ServerDatabaseService | null = null;
+let currentSessionUserId: string | null = null;
 
 /**
  * Database service class that provides access to all models (server-side only)
+ *
+ * IMPORTANT: This class should NOT be cached globally. Always create a new instance
+ * per request to ensure fresh Supabase client with correct session/cookies.
  */
 export class ServerDatabaseService {
   // Models
@@ -40,6 +44,9 @@ export class ServerDatabaseService {
 
 /**
  * Create database service for server-side usage
+ *
+ * IMPORTANT: Always creates a fresh instance per call to ensure correct session handling.
+ * Never cache this result globally - it would cause session/authentication issues.
  */
 export async function createServerDatabase(): Promise<ServerDatabaseService> {
   const supabase = await createServerClient();
@@ -47,21 +54,41 @@ export async function createServerDatabase(): Promise<ServerDatabaseService> {
 }
 
 /**
- * Get or create the global server database instance
- * This ensures we only create one instance and reuse it
+ * Get database instance with automatic session change detection
+ *
+ * This function implements a smart singleton that:
+ * 1. Caches the instance for performance (same session)
+ * 2. Automatically detects session changes (different user)
+ * 3. Resets the instance when session changes
+ * 4. Can be manually reset via resetDatabaseInstance()
  */
 export async function getDatabase(): Promise<ServerDatabaseService> {
-  if (!serverDbInstance) {
+  // Get current user session
+  const supabase = await createServerClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+  const currentUserId = user?.id || null;
+
+  // Check if session changed (different user or logout)
+  const sessionChanged = currentSessionUserId !== currentUserId;
+
+  // Reset instance if session changed or doesn't exist
+  if (sessionChanged || !serverDbInstance) {
     serverDbInstance = await createServerDatabase();
+    currentSessionUserId = currentUserId;
   }
+
   return serverDbInstance;
 }
 
 /**
- * Reset the server database instance (useful for testing or when needed)
+ * Manually reset the server database instance
+ * Useful for logout or when you need to force a fresh instance
  */
-export function resetServerDb(): void {
+export function resetDatabaseInstance(): void {
   serverDbInstance = null;
+  currentSessionUserId = null;
 }
 
 // Export individual model classes for direct usage if needed
