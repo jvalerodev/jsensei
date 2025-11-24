@@ -29,15 +29,17 @@ export function TopicHeader({
           <CheckCircle2 className="h-5 w-5 text-green-600" />
           <div>
             <p className="text-green-800 font-semibold">Topic Completado</p>
-            <p className="text-green-700 text-sm">Has completado todos los ejercicios de este módulo</p>
+            <p className="text-green-700 text-sm">
+              Has completado todos los ejercicios de este módulo
+            </p>
           </div>
         </div>
       )}
-      
+
       <div className="flex items-center gap-4 mb-6">
         <Button
-          variant="ghost"
           size="sm"
+          variant="outline"
           onClick={onBackToDashboard}
           className="flex items-center gap-2 cursor-pointer"
         >
@@ -48,7 +50,6 @@ export function TopicHeader({
           <h1 className="text-2xl font-bold text-slate-900">{topic.title}</h1>
           <p className="text-slate-600">{learningPathTitle}</p>
         </div>
-        <Badge variant="outline">Topic ID: {topic.id}</Badge>
       </div>
 
       <Card className="mb-6">
