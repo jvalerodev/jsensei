@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { LogoutButton } from "./_components";
+import { LogoutButton } from "../dashboard/_components";
 
-export default function DashboardLayout({
+export default function ContentLayout({
   children
 }: {
   children: React.ReactNode;

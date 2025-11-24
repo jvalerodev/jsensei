@@ -1,41 +1,47 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { createClient } from "@/lib/supabase/client"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 export default function RegisterPage() {
-  const [displayName, setDisplayName] = useState("")
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  const [error, setError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
+  const [displayName, setDisplayName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const supabase = createClient()
-    setIsLoading(true)
-    setError(null)
+    e.preventDefault();
+    const supabase = createClient();
+    setIsLoading(true);
+    setError(null);
 
     if (password !== confirmPassword) {
-      setError("Las contraseñas no coinciden")
-      setIsLoading(false)
-      return
+      setError("Las contraseñas no coinciden");
+      setIsLoading(false);
+      return;
     }
 
     if (password.length < 6) {
-      setError("La contraseña debe tener al menos 6 caracteres")
-      setIsLoading(false)
-      return
+      setError("La contraseña debe tener al menos 6 caracteres");
+      setIsLoading(false);
+      return;
     }
 
     try {
@@ -43,20 +49,22 @@ export default function RegisterPage() {
         email,
         password,
         options: {
-          emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/dashboard`,
+          emailRedirectTo:
+            process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
+            `${window.location.origin}/dashboard`,
           data: {
-            display_name: displayName,
-          },
-        },
-      })
-      if (error) throw error
-      router.push("/auth/verify-email")
+            display_name: displayName
+          }
+        }
+      });
+      if (error) throw error;
+      router.push("/auth/verify-email");
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "Ocurrió un error")
+      setError(error instanceof Error ? error.message : "Ocurrió un error");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
@@ -68,7 +76,9 @@ export default function RegisterPage() {
 
         <Card className="shadow-xl border-0">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-semibold text-center">Crear Cuenta</CardTitle>
+            <CardTitle className="text-2xl font-semibold text-center">
+              Crear Cuenta
+            </CardTitle>
             <CardDescription className="text-center">
               Únete a JSensei y comienza tu viaje de aprendizaje
             </CardDescription>
@@ -128,7 +138,11 @@ export default function RegisterPage() {
                   <p className="text-sm text-red-600">{error}</p>
                 </div>
               )}
-              <Button type="submit" className="w-full h-11 bg-blue-600 hover:bg-blue-700" disabled={isLoading}>
+              <Button
+                type="submit"
+                className="w-full h-11 bg-blue-600 hover:bg-blue-700 cursor-pointer"
+                disabled={isLoading}
+              >
                 {isLoading ? "Creando cuenta..." : "Crear Cuenta"}
               </Button>
             </form>
@@ -136,7 +150,10 @@ export default function RegisterPage() {
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">
                 ¿Ya tienes una cuenta?{" "}
-                <Link href="/auth/login" className="font-medium text-blue-600 hover:text-blue-500">
+                <Link
+                  href="/auth/login"
+                  className="font-medium text-blue-600 hover:text-blue-500"
+                >
                   Inicia sesión
                 </Link>
               </p>
@@ -145,5 +162,5 @@ export default function RegisterPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

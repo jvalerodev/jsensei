@@ -57,7 +57,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      <div className="container mx-auto px-4 py-8 pt-16">
+      <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <DashboardHeader
           userName={profile?.display_name || user.email || ""}
