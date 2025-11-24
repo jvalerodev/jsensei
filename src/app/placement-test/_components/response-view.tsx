@@ -61,7 +61,7 @@ export function ResponseView({
 
           <Button
             onClick={handleGoToDashboard}
-            className="w-full h-12 bg-blue-600 hover:bg-blue-700"
+            className="w-full h-12 bg-blue-600 hover:bg-blue-700 cursor-pointer"
           >
             Ir al Dashboard
           </Button>

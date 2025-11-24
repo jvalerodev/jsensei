@@ -33,7 +33,7 @@ export function Navigation({
       <Button
         onClick={handleNextQuestion}
         disabled={!selectedAnswer || isSubmitting || isGeneratingContent}
-        className="bg-blue-600 hover:bg-blue-700 px-8"
+        className="bg-blue-600 hover:bg-blue-700 px-8 cursor-pointer"
       >
         {isGeneratingContent
           ? "🤖 Generando contenido personalizado..."
